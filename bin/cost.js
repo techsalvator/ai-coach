@@ -4,7 +4,7 @@
 //
 //   node bin/cost.js hook          userPromptSubmitted hook: answers /cost with no model call; for any other
 //                                  prompt, at most a one-line cost tip (lib/coach.js; `/cost coach off`)
-//   node bin/cost.js hook --vscode the same from VS Code's chat (bin/vscode-hook.js): reports open in an editor tab
+//   node bin/cost.js hook --vscode the same from VS Code's chat (the hook file the VS Code extension writes): reports open in an editor tab
 //   node bin/cost.js [args...]     the same report on the command line (and the skill's fallback)
 //
 // The hook sees every prompt. For anything but the /cost skill it exits at once with no
@@ -35,6 +35,7 @@ const HELP = [
   '    --by tool|command|call  --since 7d|30d|all  --session ID  --scope main|subagents|all  --top N',
   '/cost coach [on|off]       one-line tips above an answer when a prompt is thin or about to cost more than it needs to',
   '/cost coach strict on|off  hold a thin prompt back with a banner instead (send it again to run it as written)',
+  '/cost coach budget <n>|auto  daily budget of Copilot premium requests; strict mode holds the first prompt once it is reached (auto: what is left, over the weekdays remaining)',
   '/cost coach strict model on|off   also suggest a rewrite of the held prompt, written by a small model (send y to run it)',
   'Reading a report uses no AI credits: it is answered locally, with no model call.',
 ].join('\n');
@@ -174,6 +175,19 @@ const INVOKED = /^The user explicitly invoked the "\/(?:ai-cost-drilldown:)?cost
 // Prompt mode (copilot -p) passes the text as typed, before any skill expansion.
 const RAW = /^\s*\/(?:ai-cost-drilldown:)?cost(\s+|$)/;
 
+/** True when the old Copilot CLI plugin of this tool is installed (its own hook is then in charge). */
+function pluginInstalled(env = process.env) {
+  const fs = require('fs');
+  const path = require('path');
+  const home = env.COPILOT_HOME || path.join(require('os').homedir(), '.copilot');
+  try {
+    const root = path.join(home, 'installed-plugins');
+    return fs.readdirSync(root).some((marketplace) => {
+      try { return fs.existsSync(path.join(root, marketplace, 'ai-cost-drilldown')); } catch { return false; }
+    });
+  } catch { return false; }
+}
+
 async function hook() {
   let raw = '';
   for await (const chunk of process.stdin) raw += chunk;
@@ -181,10 +195,12 @@ async function hook() {
   try { input = JSON.parse(raw); } catch { return; }
   const prompt = String(input?.prompt ?? '');
   if (!input.sessionId && input.session_id) input.sessionId = input.session_id; // hook files in VS Code's format send snake_case
-  // `hook --vscode` is what ~/.copilot/hooks/ai-cost-drilldown.json runs (bin/vscode-hook.js). Copilot CLI reads
-  // that folder too: there the plugin's own hook answers, so this one stays out of the way.
-  const vscode = process.argv.includes('--vscode');
-  if (vscode && process.env.COPILOT_CLI_BINARY_VERSION) return;
+  // `hook --vscode` is what ~/.copilot/hooks/ai-cost-drilldown.json runs (set up by the VS Code extension). Copilot CLI
+  // reads that folder too and answers like a plugin hook. An old plugin install has its own hook that answers, so
+  // then this one stays out of the way and a prompt is never handled twice.
+  const inCli = Boolean(process.env.COPILOT_CLI_BINARY_VERSION);
+  if (inCli && process.argv.includes('--vscode') && pluginInstalled()) return;
+  const vscode = process.argv.includes('--vscode') && !inCli;
   let args;
   if (INVOKED.test(prompt)) args = (/^ARGUMENTS: (.*)$/m.exec(prompt) || [])[1] || '';
   else if (RAW.test(prompt)) args = prompt.replace(RAW, ''); // prompt mode: `copilot -p "/cost …"`
@@ -195,7 +211,7 @@ async function hook() {
     if (/^coach(\s+(on|off|status|(strict|rewrite|strict\s+(with\s+)?model)(\s+(on|off))?))?\s*$/i.test(args.trim())) {
       const coach = require('../lib/coach');
       coach.apply(splitArgs(args).slice(1));
-      const line = `${coach.statusLine()} Switch with /cost coach on|off, /cost coach strict on|off and /cost coach strict model on|off.`;
+      const line = `${coach.statusLine()} Switch with /cost coach on|off, /cost coach strict on|off and /cost coach strict model on|off; /cost coach budget <n> sets the daily premium-request budget.`;
       process.stdout.write(JSON.stringify({ modifiedPrompt: `Reply with exactly this one line and nothing else, using no tools:\n\n${line}` }));
       return;
     }
@@ -269,14 +285,16 @@ function coachHook(input, prompt, vscode) {
   try {
     const coach = require('../lib/coach');
     const skill = /^The user explicitly invoked the "\/[^"]+" skill\./.test(prompt) || /^\s*\//.test(prompt);
-    // Strict mode can stop a thin prompt, but only where the banner would be seen: not in VS Code's chat.
-    const tip = coach.tipFor({ prompt, sessionId: input.sessionId, skill, canBlock: !vscode });
+    // Strict mode can stop a prompt where the banner will be seen: in Copilot CLI always, and in VS Code's chat (which shows
+    // nothing for a stopped prompt) only while the extension is running to show it.
+    const canBlock = !vscode || coach.notifierAlive();
+    const tip = coach.tipFor({ prompt, sessionId: input.sessionId, skill, canBlock });
     if (tip && tip.use) {
       // "y" after a banner that offered a rewrite: run the rewrite in place of the "y"
       process.stdout.write(JSON.stringify({ modifiedPrompt: tip.use }));
     } else if (tip && tip.block) {
       let suggestion = null;
-      if (coach.rewrite()) {
+      if (coach.rewrite() && !tip.repeat && !tip.gate && !tip.expiry) { // a repeat or a cold cache has nothing to reword
         const path = require('path');
         const home = process.env.COPILOT_HOME || path.join(require('os').homedir(), '.copilot');
         suggestion = require('../lib/rewrite').suggest({
@@ -285,10 +303,14 @@ function coachHook(input, prompt, vscode) {
         });
         if (suggestion) coach.offer(input.sessionId, suggestion.text);
       }
-      process.stdout.write(JSON.stringify({ decision: 'block', reason: coach.banner(tip, suggestion) }));
+      const banner = coach.banner(tip, suggestion);
+      if (vscode) coach.writeHeld(process.env, { session: input.sessionId, id: tip.id, prompt, banner }); // the extension shows it
+      process.stdout.write(JSON.stringify({ decision: 'block', reason: banner }));
     }
     else if (tip) process.stdout.write(JSON.stringify(vscode ? coach.asPrompt(tip, prompt) : coach.asContext(tip)));
-  } catch { /* a tip is never worth failing a prompt for */ }
+  } catch (err) { // a tip is never worth failing a prompt for, but a coach that broke should not look like one with nothing to say
+    try { require('../lib/coach').logError(err); } catch { /* not even that */ }
+  }
 }
 
 /** The command line: the report as box tables fitted to the terminal (--width N), or raw markdown (--md). */
@@ -309,9 +331,10 @@ if (require.main === module) {
   const argv = process.argv.slice(2);
   const main = argv[0] === 'hook' ? hook() : cli(argv);
   main.catch((err) => {
+    if (argv[0] === 'hook') { try { require('../lib/coach').logError(err); } catch { /* not even that */ } }
     console.error(`ai-cost-drilldown: ${err.usage || err.constructor?.name === 'UsageError' ? err.message : err.stack}`);
     process.exit(argv[0] === 'hook' ? 0 : 1); // a hook must never fail the prompt
   });
 }
 
-module.exports = { saveReport, openInEditor, cost, splitArgs, INVOKED, RAW, HELP, nearestCommand };
+module.exports = { pluginInstalled, saveReport, openInEditor, cost, splitArgs, INVOKED, RAW, HELP, nearestCommand };

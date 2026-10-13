@@ -2,9 +2,8 @@
   "name": "ai-cost-drilldown",
   "version": "0.1.0",
   "private": true,
-  "description": "Where AI spend goes, per prompt, session, Jira epic and model call: /cost for GitHub Copilot CLI (a plugin) and a Claude Code cost report.",
+  "description": "Where AI spend goes, per session, prompt, model call and tool call: the report code behind the AI Cost drill-down VS Code extension (vscode-extension/).",
   "bin": {
-    "ai-cost-drilldown": "bin/install.js",
     "claude-cost": "bin/claude-cost.js",
     "copilot-cost": "bin/cost.js"
   },

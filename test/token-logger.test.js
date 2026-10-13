@@ -5,10 +5,10 @@ const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const { test } = require('node:test');
+const { pathToFileURL } = require('node:url');
 
 const EXT = path.join(__dirname, '..', 'extensions', 'ai-cost');
-const BIN = path.join(__dirname, '..', 'bin', 'install-extension.js');
-const load = () => import(path.join(EXT, 'record.mjs'));
+const load = () => import(pathToFileURL(path.join(EXT, 'record.mjs')).href); // a bare C: path is not a URL import() accepts
 
 test('toRecord maps an assistant.usage event to the record the reports read', async () => {
   const { toRecord } = await load();
@@ -57,35 +57,23 @@ test('the log reader counts a call once when two logs hold it', () => {
   assert.strictEqual(readTokenLog([a, b, path.join(dir, 'missing.jsonl')]).get('s1').length, 2);
 });
 
-test('the installer copies the extension, is repeatable, and uninstalls', () => {
-  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'copilot-home-'));
-  const run = (...args) => spawnSync(process.execPath, [BIN, ...args], { encoding: 'utf8', env: { ...process.env, COPILOT_HOME: home } });
-  const dst = path.join(home, 'extensions', 'ai-cost');
-  let r = run();
-  assert.strictEqual(r.status, 0, r.stderr);
-  assert.match(r.stdout, /Installed 3 files/);
-  assert.deepStrictEqual(fs.readdirSync(dst).sort(), ['cost-command.mjs', 'extension.mjs', 'record.mjs']);
-  assert.match(r.stdout, /experimental/);
-  assert.strictEqual(run().status, 0);                       // again: still fine
-  fs.mkdirSync(path.join(home, 'extensions', 'phantomflow-cost'));
-  assert.match(run().stdout, /PhantomFlow cost extension is installed too/);
-  assert.match(run('--uninstall').stdout, /Removed/);
-  assert.ok(!fs.existsSync(dst));
-  assert.match(run('--uninstall').stdout, /not installed/);
-  assert.notStrictEqual(run('--bogus').status, 0);
-});
-
-test('installing replaces the extension\'s earlier name, and uninstall removes both', () => {
-  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'copilot-home-'));
-  const run = (...args) => spawnSync(process.execPath, [BIN, ...args], { encoding: 'utf8', env: { ...process.env, COPILOT_HOME: home } });
-  const legacy = path.join(home, 'extensions', 'ai-cost-token-logger');
-  fs.mkdirSync(legacy, { recursive: true });
-  fs.writeFileSync(path.join(legacy, 'extension.mjs'), '// old\n');
-  assert.strictEqual(run().status, 0);
-  assert.ok(!fs.existsSync(legacy), 'the old copy is gone');
-  assert.ok(fs.existsSync(path.join(home, 'extensions', 'ai-cost', 'extension.mjs')));
-  fs.mkdirSync(legacy);
-  const r = run('--uninstall');
-  assert.strictEqual((r.stdout.match(/Removed/g) || []).length, 2);
-  assert.ok(!fs.existsSync(legacy) && !fs.existsSync(path.join(home, 'extensions', 'ai-cost')));
+test('the logger keeps each session\'s last main-agent call in its own file, which the hook reads', async () => {
+  const { toRecord, writeLastCall, lastCallPath } = await load();
+  const coach = require('../lib/coach');
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'lastcall-'));
+  const env = { AI_COST_HOME: home };
+  const rec = (input, over = {}) => toRecord({ timestamp: '2026-10-01T10:00:00Z', data: { model: 'claude-sonnet-5.5', inputTokens: input, outputTokens: 1 }, ...over }, 'sess-1');
+  assert.strictEqual(lastCallPath('a/../b', env), path.join(home, 'last-call', 'a_.._b.json'), 'a session id is never a path');
+  assert.strictEqual(writeLastCall(rec(1000), env), path.join(home, 'last-call', 'sess-1.json'));
+  writeLastCall(rec(2000), env);
+  assert.strictEqual(writeLastCall(rec(9, { agentId: 'sub1' }), env), null, 'a subagent\'s call is not the session\'s context');
+  assert.strictEqual(writeLastCall(null, env), null);
+  assert.strictEqual(coach.lastCall('sess-1', env).input, 2000, 'the newest main-agent call');
+  assert.strictEqual(coach.lastCall('other', env), null);
+  // a session idle for 30 days is cleared when another session makes its first call
+  const old = path.join(home, 'last-call', 'old.json');
+  fs.writeFileSync(old, '{}');
+  fs.utimesSync(old, new Date('2026-08-01'), new Date('2026-08-01'));
+  writeLastCall(toRecord({ data: { model: 'm', inputTokens: 5 } }, 'sess-2'), env, undefined, Date.parse('2026-10-01'));
+  assert.deepStrictEqual(fs.readdirSync(path.join(home, 'last-call')).sort(), ['sess-1.json', 'sess-2.json']);
 });

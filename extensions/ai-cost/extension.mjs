@@ -1,8 +1,8 @@
-// ai-cost — the Copilot CLI extension of the ai-cost-drilldown plugin.
+// ai-cost — the Copilot CLI token logger of the ai-cost-drilldown VS Code extension.
 //
-//   /cost ...      the cost reports, answered in this process: no model call, no AI credits, no hook, no spinner
-//                  (/cost help lists everything; it is the same report code as /ai-cost-drilldown:cost)
 //   /tokenlog      where the per-call token log is, and how many calls this session has recorded
+//   /cost ...      the cost reports, when the report code sits next to this file (not in the copy the VS Code extension
+//                  installs: the reports are in VS Code's AI Cost view)
 //
 // It also records the tokens of every model call. Copilot's session log has credits per prompt but no tokens;
 // the live `assistant.usage` event has them for every model call (main agent and subagents), so this appends one
@@ -10,14 +10,13 @@
 // The reports read it for the token split, `prompt N calls`, `call K` and the token-level advice; without it
 // they show ~estimates.
 //
-// It ships inside the plugin and Copilot CLI loads it when the plugin is installed. Extensions are experimental:
-// start `copilot --experimental` or run `/experimental on`. (`node bin/install-extension.js` copies it to the user
-// extensions folder instead, for a Copilot that does not load plugin extensions; that copy only logs.)
+// The VS Code extension's "Set Up Copilot Tracking" copies it to ~/.copilot/extensions/ai-cost/. Extensions are
+// experimental in Copilot CLI: start `copilot --experimental` or run `/experimental on` once.
 // Never lets a logging failure touch the session.
 import { joinSession } from "@github/copilot-sdk/extension";
 import fs from "node:fs";
 import path from "node:path";
-import { logPath, toRecord } from "./record.mjs";
+import { logPath, toRecord, writeLastCall } from "./record.mjs";
 import { answer, loadReports } from "./cost-command.mjs";
 
 const file = logPath();
@@ -28,7 +27,7 @@ function status() {
     let size = "no file yet";
     try { size = `${(fs.statSync(file).size / 1024).toFixed(1)} KB`; } catch { /* not written yet */ }
     return `Token log: ${file} (${size}). ${written} model call${written === 1 ? "" : "s"} recorded in this session.`
-        + (reports ? "" : " (/cost is not available: this copy has no report code; use the plugin's /ai-cost-drilldown:cost.)");
+        + (reports ? "" : " (/cost is not available: this copy only logs; the reports are in VS Code's AI Cost view.)");
 }
 
 const commands = [
@@ -70,6 +69,7 @@ session.on("assistant.usage", (ev) => {
         fs.mkdirSync(path.dirname(file), { recursive: true });
         fs.appendFileSync(file, JSON.stringify(record) + "\n");
         written++;
+        writeLastCall(record); // what the hook reads to price the next prompt
     } catch {
         // best effort only
     }

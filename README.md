@@ -1,403 +1,476 @@
-# ai-cost-drilldown
+# AI Cost Drilldown for VS Code
 
-See where your AI spend goes, for **GitHub Copilot CLI**, **VS Code Copilot Chat** and **Claude Code**.
+See where your AI spend goes, from a month down to a single tool call, for **Claude Code**, **GitHub Copilot CLI**
+and **VS Code Copilot Chat**, inside VS Code.
 
-It reads the session logs these tools already keep on your machine and answers questions like:
+![The overview: cost by month, split by tool](docs/images/vscode-1-overview-months.png)
 
-- What did the last week cost, and which session, prompt, skill or Jira epic was it?
-- Why did this one prompt cost $4? Which model call, which subagent, which tool result?
-- Where can I cut spend?
-
-Reading a report makes **no model call**: it costs no AI credits and no tokens. Nothing leaves your machine, no
-API is called, and no credentials are needed.
+*Every screen in this README is one of the extension's own panels, drawn from made-up sample sessions. Nothing in
+the images comes from anyone's real logs.*
 
 ## Contents
 
-- [Quick start](#quick-start)
-- [The two command names](#the-two-command-names)
-- [Commands](#commands)
-- [A typical drill-down](#a-typical-drill-down)
-- [Cost tips while you type](#cost-tips-while-you-type)
+- [Install](#install)
+- [The screens](#the-screens)
+  - [Overview](#overview) · [The sidebar](#the-sidebar) · [A month](#a-month)
+  - [A session](#a-session) · [A prompt](#a-prompt) · [A model call](#a-model-call) · [A tool call](#a-tool-call)
+- [Finding things: filter, sort, sync and back](#finding-things-filter-sort-sync-and-back)
+- [Advice](#advice)
+- [Copilot tracking and cost tips](#copilot-tracking-and-cost-tips)
 - [Reading the numbers](#reading-the-numbers)
-- [VS Code](#vs-code)
-- [Claude Code](#claude-code)
-- [Cost per epic: how prompts are attributed](#cost-per-epic-how-prompts-are-attributed)
+- [Settings and commands](#settings-and-commands)
+- [Your data and privacy](#your-data-and-privacy)
 - [What it cannot do](#what-it-cannot-do)
 - [Develop](#develop)
 
-Setup details, configuration and troubleshooting are in [INSTALL.md](INSTALL.md).
+## Install
 
-## Quick start
+You need **VS Code 1.90 or newer**. Node.js 18 or newer is needed only for [Copilot tracking](#copilot-tracking-and-cost-tips),
+because its hook is a Node script.
 
-1. Install the Copilot CLI plugin (it asks before changing anything):
+The packaged extension, a `.vsix` file, is attached to each [release](https://github.com/flexera/ai-cost-drilldown/releases).
+Download it from the latest release, or with the GitHub CLI:
 
-   ```bash
-   npx github:flexera/ai-cost-drilldown
-   ```
+```bash
+gh release download --repo flexera/ai-cost-drilldown --pattern '*.vsix'
+code --install-extension ai-cost-drilldown-vscode-*.vsix
+```
 
-2. In Copilot, turn extensions on once, then start a new session:
+or, in VS Code, **Extensions → … → Install from VSIX…** and pick that file. Then run **Developer: Reload Window**.
+To update, install the newer file over it (add `--force` to reinstall the same version).
 
-   ```
-   /experimental on
-   ```
+To build the `.vsix` from source:
 
-3. Type:
+```bash
+cd vscode-extension
+npm run package          # copies the report code in, then writes ../dist/ai-cost-drilldown-vscode-<version>.vsix
+```
 
-   ```
-   /cost
-   ```
+`dist/` is not committed.
 
-You get the last 7 days across all sessions. From there, `/cost help` lists everything.
+### Releasing
 
-Needs Node.js 18+ and access to this repository. Copilot CLI is needed only for the parts that run inside it:
-without it the installer sets up the VS Code chat hook and tasks alone. To try it without installing, run
-`copilot --plugin-dir <your clone>`. When VS Code is installed the installer also adds the chat hook and the tasks (see [VS Code](#vs-code)); for Claude Code nothing is installed,
-see [Claude Code](#claude-code).
+Releases are made by merging. A pull request that changes what the extension ships (anything under `vscode-extension/`
+except its tests, scripts, README and CHANGELOG, or anything under `lib/`, `bin/` or `extensions/`) must bump the version
+and add that version's CHANGELOG section: the **Version bump** check fails otherwise. Make that check required in the
+branch protection of `main` to stop the merge. In the pull request, set the new version in `vscode-extension/package.json` and add a
+`## <version>` section to `vscode-extension/CHANGELOG.md`; merge it to `main`.
 
-## The two command names
+The [workflow](.github/workflows/vscode-extension.yml) runs the tests and builds the `.vsix`. If there is no release for
+that version yet, it creates the tag `vscode-v<version>` on the merge commit and publishes a GitHub release with the
+`.vsix` attached and the CHANGELOG section as the notes. If the version already has a release (a merge that did not
+bump it), nothing is published and the run says so. Pull requests only run the tests and build the `.vsix` as a
+downloadable build artifact.
 
-The plugin gives you the same reports under two names. Both cost no credits.
+To publish a release again, delete the release and its tag, then re-run the workflow on `main` from the Actions tab.
 
-| Name | Needs `/experimental on`? | How it is answered |
+What changed is in the [changelog](vscode-extension/CHANGELOG.md).
+
+Click the **AI Cost** icon in the activity bar. Your Claude Code and Copilot sessions load by themselves: there is
+nothing to sign in to and no key to enter. To remove it, uninstall it like any extension.
+
+If you used the earlier Copilot CLI plugin, see [Moving from the plugin](#moving-from-the-copilot-cli-plugin).
+
+## The screens
+
+Inside VS Code the same screens are in the tour: run **AI Cost: Show Tour** from the Command Palette, or open Help → Get Started → AI Cost Drilldown.
+The extension's own page in the Extensions view shows this text without the images, because VS Code only loads
+images there from public `https` addresses.
+
+### Overview
+
+Selecting the AI Cost icon opens the overview in an editor tab. It starts with **cost by month**, stacked by tool:
+Claude Code is blue, Copilot CLI orange, VS Code chat green, and a tool keeps its colour on every screen.
+
+- **Tiles:** total cost, today, number of sessions, and how much of the input came from the prompt cache.
+- **Cost by month** as a chart and as a table (cost per tool, sessions and prompts).
+- **Where the tokens went:** cache reads, cache writes, new input and output, with each one's share.
+- **By source, by model** and the **most expensive prompts**.
+- **By month · By day · 7d · 30d · 90d** switches the range. **By day** shows the cost of every day in the loaded history;
+  the 90-day range is drawn by week, and a month shows its days.
+- **The legend under the chart is the tool selector** (Claude Code, Copilot CLI, VS Code chat). Click a tool to leave it out
+  and click it again to bring it back; the last one cannot be switched off. It is the same filter as the Sessions view's
+  **Filter → Source**, so the chart, tiles, tokens, sources, models, prompts, the Sessions tree and Advice all follow.
+- **↻ Sync sessions** reads the logs again and shows when it last did.
+
+![By day, with Copilot CLI left out through the legend](docs/images/vscode-1b-overview-by-day.png)
+
+Almost everything on the page is clickable. A source or model bar filters the Sessions view to it, a month opens
+that month, a day or week filters to it, and a prompt opens its detail. Hover any bar for its numbers.
+
+### The sidebar
+
+The AI Cost icon shows four panels. The first is a compact copy of the overview; its **Open the full overview ›**
+link opens the tab.
+
+![The compact overview in the sidebar](docs/images/vscode-2-sidebar-overview.png)
+
+| Panel | What it shows |
+|---|---|
+| **Overview** | The picture above: tiles, cost by month, tokens, sources and models |
+| **Sessions** | Every session as a tree: session → prompt → model call, with cost, tokens and the tools each call used. Click any row to open its detail |
+| **Advice** | Where the loaded sessions could have cost less, each with an estimated saving and the prompts behind it. See [Advice](#advice) |
+| **Coach** | Switches for [Copilot tracking and cost tips](#copilot-tracking-and-cost-tips) |
+
+The Sessions title bar has **Overview**, **Sort**, **Filter**, **Clear filter** (while one is active) and **Sync** buttons.
+
+### A month
+
+Click a month, in the chart or the table, and the whole overview switches to it: its tiles, its cost per day,
+its sources, models and prompts. A breadcrumb at the top (`All months › September 2026`) takes you back, and
+**Filter sessions to this month** applies the month to the Sessions view.
+
+![One month, day by day](docs/images/vscode-3-overview-month.png)
+
+### Copilot premium requests left
+
+Under the tiles, a bar shows how many of your plan's premium requests are left this month: used, left, the
+reset date, and where the month will end at the current pace, flagged when that is over what the plan includes.
+The numbers are the ones Copilot CLI writes into its own session log, so they are your plan's real allowance, with
+nothing to configure. They update when Copilot CLI makes a call; the panel is hidden on plans with unlimited
+requests, and says so when the last reading is from a month that has ended. The status bar carries it as well (`AI today $1.20 · Copilot 6,832 left (89.9%)`) and turns to a warning colour when the month is
+on pace to go over. The panel also sets a daily budget: what is left, spread over the weekdays remaining until the reset (Monday to Friday,
+today included while it is a weekday), with today's use against it. The status bar shows it as `3/16/day`, today's
+requests over the budget. Set your own number with **Daily budget (premium requests)** in the Coach panel (empty means automatic, the calculation above), or from a terminal with `cost coach budget 50` (`cost coach budget auto` goes back to automatic; with no number it shows the current budget); the status bar
+turns to a warning colour when today goes over it. Today's use comes from Copilot CLI
+sessions. Claude Code has no monthly request quota in its logs, so only Copilot is shown.
+
+Two lines under the budget turn the pace into something to act on:
+
+- **What the room left today buys, by model.** A model's multiplier is what makes a request cost 1, 3 or 0.33, so the
+  panel says how many prompts the rest of today's budget is on each of the models you use most (`17 on claude-sonnet-5.5
+  (1 a prompt, from your 3 prompts) · 5 on claude-opus-5.5 · unlimited on gpt-5-mini`). The per-prompt figure is the median
+  of your own single-model prompts over 30 days, with at least three, so it is what your prompts cost, not a table. With
+  no history yet it shows the usual 0.33x, 1x and 3x tiers instead and points you to `/model`.
+- **How the last 7 days ran.** The month's pace is an average since the reset, which is slow to notice a change. When the
+  last 7 days' pace would end the month at a clearly different number, the panel says so, and whether that is over what
+  your plan includes. This machine's prompts set the rate and the account's reading sets where it starts, so use on another
+  machine makes it an underestimate.
+
+### The model guard
+
+When Copilot's premium requests are on pace to run out (at the last 7 days' pace, or today's use has reached the daily
+budget), the extension says so once, names the models that cost you the most requests a prompt, and names the cheaper
+one you already use most (`claude-opus-5.5 (3 a prompt) … claude-sonnet-5.5 costs you about 1 a prompt: use it for
+routine work`). The status bar goes to its warning colour and its tooltip carries the same line. It stays on until the
+month is projected under 95% of the plan, so it does not flicker at the line, and a new billing period starts clean.
+
+It advises and nothing more: **it does not hide or switch any model.** VS Code keeps which models are hidden in its own
+profile storage and offers no setting, command or extension API to change it, so hiding is done by you, with the eye
+icon in **Chat: Manage Language Models**. An organization that must enforce a list does it in GitHub's Copilot model
+policy. The notification's button opens the model picker. In the Coach panel: the **Model guard** switch (on) and the
+**Model guard: costly from** limit (2: the requests a prompt from which a model counts as costly).
+
+### A session
+
+Click a session in the tree, or a bar in the overview. The panel shows its tool, folder and branch, a cost-per-prompt
+chart, where its tokens went, a table of models, and every prompt with tokens in and out, cache hit and cost.
+Click a column header to sort the table; click a row or a bar to open that prompt.
+
+![A session: cost per prompt, tokens, models and prompts](docs/images/vscode-4-session.png)
+
+### A prompt
+
+A prompt shows its cost, model calls, cache hit and tool calls, the token split, the cost of each model call, a
+**Model calls** table with the tools each call used, and every tool call it made.
+
+![A prompt: its model calls and tool calls](docs/images/vscode-5-prompt.png)
+
+A **breadcrumb with a Back button** runs along the top of every detail panel: `‹ Back | Overview › billing-service › Prompt 6`.
+Each part is a link, and Back steps through what you opened, in order.
+
+### A model call
+
+A call shows what it cost, its tokens in and out, and the tools it made. Below that it shows **what went in**
+(what was new since the previous call: your prompt, or the results of the previous call's tools) and
+**what came out** (the reply, the reasoning where it is recorded, and each tool request).
+
+![One model call: what went in and what came out](docs/images/vscode-6-call.png)
+
+The rest of a call's input was the earlier conversation, almost all of it served from the cache; the token bar
+shows how much.
+
+### A tool call
+
+Click any tool in a Tool calls table to see its **input** (the full arguments) and its **result**, with its status,
+result size and time. This works for both Claude Code and Copilot CLI, including prompts that have no token data.
+
+![One tool call: its input and its result](docs/images/vscode-7-tool.png)
+
+## Finding things: filter, sort, sync and back
+
+- **Filter** (the funnel in the Sessions title bar) narrows the tree by *source*, *day or date range*, *models*,
+  *minimum prompt cost* and *text* (a word in the prompt, session title, session ID, folder or branch). Clicking a
+  chart adds to the filter too, so you can go source → model → day. While a filter is active, a message at the top of
+  the tree says what it is and how many sessions and prompts match, and the funnel next to it clears it. The Advice
+  panel and the overview follow the filter.
+- **Sort** orders sessions, the prompts in them and each prompt's calls together, by time, cost, tokens in, tokens
+  out, cache hit or number of calls. Choose the same key again to reverse it. Anything without a value for the key
+  goes last.
+- **Sync sessions** reads the logs again. It also runs by itself every minute; the manual button shows progress,
+  says what changed (`synced 108 sessions (+2), 1177 prompts (+8)`) and the overview shows when it last synced.
+- **Back and the breadcrumb** work in every detail panel, as described [above](#a-prompt).
+
+## Advice
+
+The Advice panel measures your own sessions and lists where spend could be cut. Each finding says what was
+measured, an estimated saving in dollars, and the prompts it comes from (click one to open it).
+
+| Finding | What it measures |
+|---|---|
+| **Prompt cache expired between prompts** | Prompts that started after the cache had lapsed, so the whole conversation was re-sent at the cache-write price instead of the cheap read price |
+| **Model switched mid-session** | Prompts that ran on a different model from the one before, which cannot reuse its cache |
+| **Top-tier model on short replies** | Calls on the larger models that returned 400 tokens or fewer, re-priced on a Sonnet-class model |
+| **Very long conversations** | Calls that sent more than 150k tokens of context; the saving is a ceiling for capping it at 100k |
+| **A few prompts carry the spend** | The five most expensive prompts and their share of the total |
+
+Savings overlap (a fresh session also removes cache expiries), so they do not add up. Findings that would save
+less than a few cents are left out.
+
+### Token-saving tools that were not used
+
+Under the measured findings, with a tools icon, the panel lists the habits that would have prevented them and were not
+used. They claim no saving of their own, because what they cost is already in the findings above.
+
+| Finding | When it shows |
+|---|---|
+| **/compact was not used in long sessions** | Copilot CLI sessions that reached 150k tokens of context (or 21 prompts, where there is no token data) and were never compacted. Counted from Copilot's own log, which records each compaction |
+| **No project instructions file** | A folder you ran three or more sessions in has no `.github/copilot-instructions.md` or `AGENTS.md` (for Claude Code: `CLAUDE.md` or `AGENTS.md`), so each session works out the build, the tests and the layout again |
+| **Copilot tracking is off** / **The token logger is not recording** | A fifth or more of the last 7 days' Copilot CLI prompts have no token data. It says which of the two it is, and what to do |
+| **Cost tips are off** | The Coach switch is off while Copilot prompts are being sent |
+
+Claude Code's log does not say when a context was compacted, so its sessions are not judged on that.
+
+## Copilot tracking and cost tips
+
+Without any setup, Copilot sessions already show **credits and dollars per prompt, and prompt tokens**, read from
+Copilot CLI's session log and from VS Code's chat storage. **Copilot tracking** adds two things that need to run
+inside Copilot itself:
+
+- **Per-call tokens.** Copilot's log has credits but no tokens. A small Copilot CLI extension records the tokens of
+  every model call as it happens, which gives the token split, the model-calls table and exact call costs. Prompts
+  it did not see show "No token data": that cannot be recovered afterwards.
+- **Cost tips.** A prompt hook shows one line when a prompt is about to cost more than it needs to, in Copilot CLI and
+  in VS Code's chat.
+
+To turn it on, tick **Copilot tracking** in the Coach panel, or run **AI Cost: Set Up Copilot Tracking**. VS Code
+also offers it once if it finds Copilot on your machine. It asks first and lists exactly what it will write:
+
+| Where | What |
+|---|---|
+| `~/.copilot/hooks/ai-cost-drilldown.json` | The hook, read by VS Code chat and Copilot CLI |
+| `~/.copilot/extensions/ai-cost/` | The token logger, which writes `~/.ai-cost-drilldown/copilot-tokens.jsonl` and each session's last call in `~/.ai-cost-drilldown/last-call/` |
+| `~/.ai-cost-drilldown/runtime/` | The scripts the hook runs, copied somewhere that survives extension updates |
+
+Copilot CLI loads extensions only in experimental mode: run `/experimental on` once, then start a new session.
+**AI Cost: Remove Copilot Tracking** deletes the three pieces and keeps your token log and settings. After an
+extension update the copies are refreshed by themselves.
+
+### The cost tips and the five switches
+
+The Coach panel has five switches, saved where the hook reads them (`~/.ai-cost-drilldown/config.json`):
+
+| Switch | What it does | Default |
 |---|---|---|
-| `/cost` | Yes | by the plugin's extension, inside Copilot |
-| `/ai-cost-drilldown:cost` | No | by a hook that runs the report and returns it in place of a model reply |
+| **Coach** | Shows a one-line tip when a prompt, or the session it is sent in, is about to cost more than it needs to | on |
+| **Strict mode** | In Copilot CLI, holds a prompt back with a banner instead of running it (a thin prompt, a repeat, a cache expiry, a long session, a big paste or going over your daily budget); sending the same prompt again runs it as written. In VS Code chat it holds the prompt too, and the extension shows the banner as a notification ([below](#strict-mode-in-vs-code-chat)); if the extension is not running, VS Code chat gets the tip instead | on |
+| **Hold on every cache expiry** | In strict mode, hold a prompt whenever the session's cache has expired (idle past the cache lifetime, in a session of 5 or more prompts), with its price in the banner when the token log knows the session's size. Off, only an expiry whose restart costs at least the cost limit is held and the rest is a tip | on |
+| **Strict model** | The banner also carries the prompt reworded by a small model (one `copilot -p` call each time, so it costs a little) | off |
+| **Model guard** | Says which of your models cost the most premium requests a prompt, and which cheaper one you use, while the month is on pace to run out ([above](#the-model-guard)). Advice only | on |
 
-Use `/cost` if you have experimental mode on. `/ai-cost-drilldown:cost` is there for everyone else: Copilot always
-prefixes a plugin's own command with the plugin's name, so it cannot be shortened. In prompt mode,
-`copilot -p "/cost …"` works too.
+A switch shows "inactive" when the one it depends on is off, and "set by …" when an environment variable
+(`AI_COST_COACH`, `AI_COST_COACH_STRICT`, `AI_COST_COACH_EXPIRY`, `AI_COST_COACH_REWRITE`, `AI_COST_MODEL_GUARD`) decides it.
 
-Only the extension can record the tokens of each model call, so **without experimental mode the token figures of new
-prompts are estimates** (marked `~`) and the per-call views are unavailable. Credits and dollars are exact either way.
-See [Reading the numbers](#reading-the-numbers).
+| Rule | When it applies | Held in strict mode |
+|---|---|---|
+| **Cold cache over the cost limit** | The session's cache has expired and re-sending its context would cost at least the cost limit (default $0.50) for the first model call alone. The banner says how many tokens and how many dollars, and how much of that is avoidable. Skills are checked too | yes, on every expiry, whatever the switch |
+| **Repeated prompt** | The same prompt, or the same skill with the same arguments, already ran in this session. The banner says how long ago, and what that run cost when the token log saw it | yes, every time |
+| Nothing to work on | A short prompt names no file, function or ticket: "clean up the code" | yes, every time |
+| Problem without the error | A short prompt mentions an error but not where or what it says: "fix the bug". Not held when the agent can find it with one command: "fix the failing tests", the lint errors, the build, type errors, CI, merge conflicts | yes, every time |
+| Several asks in one | A short prompt strings separate tasks together with "also … also …" | yes, every time |
+| Bare retry | The prompt is only "try again", "fix it", "still not working" and the like | yes, every time |
+| **Cache expired** | A session of 5 or more prompts sat idle past the cache lifetime (5 minutes for Claude models, 30 for GPT, or what your token log shows it to be: [below](#what-the-coach-learns)). The banner says how long and, when the token log knows the session's size, the price of restarting it | yes, on every expiry (the **Hold on every cache expiry** switch); off, it is a tip |
+| **Long session** | The session's context is 150k tokens or more (the **Long session (tokens)** limit), all of it re-sent on every model call. Without the token logger's log the prompt count decides instead: 21 or more prompts (the **Long session (prompts)** limit) | yes, once per session, when it is crossed |
+| **Daily budget** | Today's premium requests have reached the day's budget: the **Daily budget (premium requests)** you set, or, when you have not set one, what the month has left spread over the weekdays remaining (worked out once a day; no budget at weekends). The first prompt after that is held, with what was used and a tip to pick a model with a lower premium multiplier. Today's use is what this machine's Copilot sessions used since midnight (Copilot CLI and Copilot in VS Code), from the running totals in their logs; requests made on another machine or in another tool are not counted | yes, once a day |
+| **Big paste** | The prompt carries 12,000 or more characters of pasted text (the **Big paste** limit), which is re-sent on every later call | yes, every time |
 
-The rest of this page writes `/cost`, except the drill-down walkthrough; every command works with either name.
+Every held prompt's banner says why it was held, gives a **Tip** on what to change (and a fill-in template for a thin prompt), and says how to run it anyway: send the same prompt again.
+When a prompt trips several rules at once, one banner lists them all (**Also:**), so sending it again never runs it past a reason you were not shown.
+With strict mode off, or in VS Code chat while the extension is not running, each of these is a one-line tip instead: at most one tip per prompt, and each kind once per session. The checks are patterns on the prompt text and the
+session's own log, run locally; they catch prompts that are plainly thin, not ones that are subtly unclear.
+Questions, answers ("yes", "continue"), follow-ups that lean on the conversation ("still the same error", "yes, fix
+the alias bug first") and anything naming a file, identifier, ticket, link, number or quoted text are never flagged
+as thin, and `/compact`, `/clear` and `/new` are never held. The cost rule needs the token logger that Copilot
+tracking installs, because that log says how big the session's context is; without it you get the plain cache tip.
 
-## Commands
+### If the hook does not run
 
-### All sessions
+VS Code and Copilot start the hook with a thin `PATH`, so a bare `node` command is not found (the hook fails with
+`node: command not found` and every prompt runs unchecked). Setting up Copilot tracking therefore writes the **absolute
+path to your node** into the hook file, and an earlier setup that wrote a bare `node` is repaired the next time the
+extension starts. **AI Cost: Check Copilot Tracking** runs the hook with that same thin `PATH` and tells you whether it
+works; it is also run right after setup and a few seconds after VS Code starts, and a failure shows an error. Copilot
+records a failed hook in the session's `events.jsonl` (`hook.end` with `success: false` and the error), which is where to
+look if prompts are not being held.
 
-| Command | Shows |
-|---|---|
-| `/cost` | The last 7 days: the total, and one row per session (prompts, credits, dollars, tokens, active time, up time) |
-| `/cost prompts` | The 25 most expensive prompts across sessions, each with its session and prompt number (`#`) |
-| `/cost prompts --by day` | Totals grouped by day. Also `--by session`, `skill`, `repo`, `branch`, `model`, `source` |
-| `/cost list` | Recent sessions, to find a session id |
+A hook that starts but then fails inside lets the prompt run, as a hook must, and writes the error to
+`~/.ai-cost-drilldown/hook-errors.jsonl`. The **Copilot tracking** row in the Coach panel then says how many prompts ran
+unchecked in the last day, and **AI Cost: Check Copilot Tracking** shows the last error.
 
-Options for `prompts`: `--since 7d|30d|all|2026-09-01`, `--top N`, `--sort credits|time|wall|tokens|tools|recent`,
-`--grep TEXT`, `--repo TEXT`, `--source all|cli|vscode`, `--csv` (writes a file and prints its path).
+**On Windows** nothing documents which shell starts a hook, and they disagree: `"C:/…/node.exe" "C:/…/cost.js" hook` is a
+command in cmd.exe and Git Bash but a parse error in PowerShell. So there the hook file names one small file,
+`~/.ai-cost-drilldown/runtime/hook.cmd`, which holds node's full path. Written with forward slashes and no quotes it runs
+from cmd.exe, PowerShell and Git Bash alike; if your home folder has a space in its name it is run through
+`cmd /d /c "…"`, which cmd.exe and PowerShell run and Git Bash does not. **AI Cost: Check Copilot Tracking** starts the
+hook from cmd.exe and from PowerShell and reports the one that fails. A setup made by 0.2.1 or earlier is rewritten the
+next time the extension starts.
 
-### One session
+### Strict mode in VS Code chat
 
-| Command | Shows |
-|---|---|
-| `/cost session` | The session you are in: the last 20 prompts, each with its number, credits, dollars, tokens, model, tools, subagents and time |
-| `/cost session --all` | Every prompt of this session (`--last 50` for the last 50) |
-| `/cost 20` | Shorthand for this session's last 20 prompts |
-| `/cost session a05dcb09` | Another session, by id or the first characters of it |
+VS Code stops a prompt that a hook blocks, but it never shows the hook's reason: the prompt would just vanish. So the
+hook blocks in VS Code chat only while this extension is running to show why. The extension tells the hook it is there
+(a small heartbeat file, refreshed every 15 seconds), and each held prompt appears as a notification in the VS Code
+window you are using:
 
-### One prompt
+- **Why** opens the full banner (the reason, the tip, what to do) with the prompt.
+- **Send anyway** sends the same prompt to the chat again, which runs it. It is the same as sending it again in
+  Copilot CLI.
+- **Copy prompt** copies it, so you can reword it first.
 
-Prompt numbers come from the `#` column of `/cost session` or `/cost prompts`.
+If no VS Code window with the extension is open, or `aiCost.notifyHeldPrompts` is off, the hook gives VS Code chat a tip
+instead, as before, so a prompt is never stopped silently. A notification is shown in the focused window only, and only
+for a minute: a hold you did not see in time is dropped, and sending the same prompt again still runs it.
 
-| Command | Shows |
-|---|---|
-| `/cost prompt 12` | Prompt 12 of this session: tokens by agent and model, cost at list price, every tool call |
-| `/cost prompt 12 calls` | Every model call of that prompt: what made its input grow, what it did next, what it cost |
-| `/cost prompt 12 call 5` | One model call in full: cost per token type, what went in, its reasoning summary, the tools it asked for |
-| `/cost prompt a05dcb09 428` | The same for **any session, without switching to it**. Add `calls` or `call K` as above |
+### Cost limit, results and pause
 
-`a05dcb09:428` and `/cost session a05dcb09 prompt 428` mean the same as the last row.
+Under the switches the Coach panel has:
 
-### Tools, tickets and advice
+- **Coach results** opens what the coach did over the last 30 days: tips shown, prompts held, and whether you then
+  changed the prompt or sent it anyway, with an estimate of the cost the changes avoided.
 
-| Command | Shows |
-|---|---|
-| `/cost tools` | Which tool calls drive cost. `--by tool\|command\|call`, `--since`, `--scope main\|subagents\|all`, `--top N` |
-| `/cost session a05dcb09 tools` | The same for one session |
-| `/cost epics` | Cost per Jira epic over 30 days. `--stories` lists every ticket, `--key FOPTS-123` breaks one down, `--unattributed` lists prompts tied to no ticket |
-| `/cost advise` | Where spend can be cut, measured on your own sessions, with an estimated saving per finding |
-| `/cost help` | All commands |
+  ![Coach results: what was held, what you did next](docs/images/vscode-8-coach-results.png)
 
-## A typical drill-down
+  *Held* is a prompt strict mode stopped. *Changed* is a different prompt afterwards, or a hold that no longer applied
+  (for example after `/compact`). *Sent anyway* is the same prompt sent again. A cold cache is different, because
+  rewording the prompt does not warm it: a different prompt in the same session is the same hold, still open. It becomes
+  *Changed* when the cache is dealt with (`/compact`, `/clear`, `/new`) or the session is left alone for a day (the
+  work went to a new session), and *Sent anyway* when a prompt is sent again on the cold cache. The avoided figure counts only held
+  prompts you changed, from list prices: for a cold cache the extra cost of re-sending the context at full price, for a
+  repeat the cost of the earlier run. It is an estimate, not a measured saving.
+- **Cost limit**, **Long session (tokens)**, **Long session (prompts)**, **Daily budget (premium requests)**, **Big paste** and **Model guard: costly from** are the thresholds above. Click one to change it; leave the box
+  empty to put the default back.
+- **Pause strict mode** stops prompts being held for 30 minutes, 1 hour, 4 hours or until tomorrow, and resumes by
+  itself. Tips still show while it is paused.
 
-Five commands, from the overview down to a single model call. Run them in order: each uses what the one before
-showed. They are written with the long name, which works for everyone; with experimental mode on, `/cost` does the same.
+### What the coach learns
 
-**1. Which sessions cost the most this week?**
+The coach's rules start from fixed lines. Two things in it are then corrected from what happens on your machine, and
+**Coach results** has a **What the coach learned** section that says what was corrected and from how much evidence.
 
-```
-/ai-cost-drilldown:cost
-```
+- **The cache lifetime.** Five minutes for Claude models and thirty for GPT are what is documented, not necessarily what
+  your plan does. With the token logger on, the hook looks at the idle gaps between a session's model calls and whether
+  the call after each gap read its context from the cache or paid for it again, and picks the lifetime (5, 10, 30 or 60
+  minutes) that explains them. It overrules the documented figure only with five or more gaps that tell the choices
+  apart and a lifetime that explains at least four in five of them. It is worked out once a day and kept in
+  `~/.ai-cost-drilldown/cache-ttl.json`.
+- **Cold-cache warnings, checked.** When you send a prompt anyway after a cold-cache hold, the hook looks at the next
+  model call in the token log: did it start cold, as warned? Coach results counts how many warnings were right and how
+  many were false alarms.
 
-The last 7 days: the total, and one row per session. Note the id of the session at the top.
+Both need the token logger from Copilot tracking; without it the documented lifetimes are used and nothing is checked.
 
-![All sessions of the last 7 days, one row each](docs/images/drilldown-1-sessions.png)
+### Moving from the Copilot CLI plugin
 
-**2. Which prompts were the expensive ones?**
-
-```
-/ai-cost-drilldown:cost prompts --since 30d --top 10
-```
-
-The 10 costliest prompts across all sessions, each with its session and prompt number (`#`). Note one pair, for
-example session `a05dcb09`, `#` 428.
-
-![The costliest prompts, with session and prompt number](docs/images/drilldown-2-prompts.png)
-
-**3. Where did that prompt's money go?**
-
-```
-/ai-cost-drilldown:cost prompt a05dcb09 428
-```
-
-Tokens and cost by agent and model (the main agent against each subagent), the share that was cache reads, cache
-writes and output, and every tool call the prompt made.
-
-![One prompt: tokens and cost by agent and model, then its tool calls](docs/images/drilldown-3-prompt.png)
-
-**4. Which model call was it, and what filled its context?**
-
-```
-/ai-cost-drilldown:cost prompt a05dcb09 428 calls
-```
-
-Every model call in order: how much its input grew, what added it, what the call did next, and its cost. Look for
-`⏲` and `✕` (the cache was missed) and for a jump in the Added column.
-
-![Every model call of the prompt](docs/images/drilldown-4-calls.png)
-
-**5. One call in full**
-
-```
-/ai-cost-drilldown:cost prompt a05dcb09 428 call 72
-```
-
-That call's cost per token type, what went into it, its reasoning summary and the tools it asked for.
-
-![One model call in full](docs/images/drilldown-5-call.png)
-
-The screenshots are real output, cut after the first 46 lines; `node scripts/screenshots.js` regenerates them
-(`--set coach` for the cost-tips ones, which sends four small prompts through Copilot).
-Replace `a05dcb09`, `428` and `72` with what the earlier steps show you. Steps 4 and 5 need per-call tokens, so they
-work only for prompts the extension recorded; older ones answer "No live token records" (see
-[Reading the numbers](#reading-the-numbers)).
-
-Three more that are useful on their own:
-
-| Command | Answers |
-|---|---|
-| `/ai-cost-drilldown:cost epics --key FOPTS-29970` | What did this epic cost, by skill, ticket, day and session? |
-| `/ai-cost-drilldown:cost advise` | Where can spend be cut, and by roughly how much? |
-| `/ai-cost-drilldown:cost prompts --since all --by source` | How does Copilot CLI compare with VS Code chat? |
-
-## Cost tips while you type
-
-`/cost advise` tells you afterwards where the spend went. Cost tips say it at the moment it is about to happen:
-when a prompt is going to cost more than it needs to, one line appears above Copilot's answer.
-A prompt too thin to act on (the last four rows) is held back in Copilot CLI until it is rephrased or sent again:
-see [strict mode](#strict-mode-hold-a-thin-prompt-back), which is on by default.
-
-| Tip | When it appears |
-|---|---|
-| Cache expired | The session was idle past the cache lifetime (5 minutes for Claude models, 30 for GPT) after 5 or more prompts, so this prompt re-reads the whole conversation at full price |
-| Long session | The session holds 21 or more prompts, all re-sent on every model call |
-| Big paste | The prompt carries 12,000 or more characters of pasted text |
-| Bare retry | The prompt is only "try again", "fix it", "still not working" and the like |
-| Nothing to work on | A short prompt names no file, function or ticket: "clean up the code", or "make it faster" as a session's first prompt |
-| Problem without the error | A short prompt mentions an error or failure but not where or what it says: "fix the bug", "getting an error on build" |
-| Several asks in one | A short prompt strings separate tasks together with "also … also …" |
-
-![A cost tip above Copilot's answer](docs/images/coach-1-tip.png)
-
-- At most one tip per prompt, and each kind once per session (an expired cache: at most once an hour).
-- A hook cannot print to the chat without stopping the prompt, so the tip is handed to the model along with
-  the prompt and the model shows it first. It costs a few dozen tokens when a tip appears and nothing
-  otherwise. The model usually repeats it word for word, but it is the model's reply: it can occasionally
-  leave it out.
-- In VS Code's chat (with the [chat hook](#vs-code)) the tip is appended to the prompt instead, because VS Code
-  drops a hook's added context when it adds its own. Your words are sent unchanged.
-- Everything is decided locally from the prompt text and the session's own log. Nothing is sent anywhere.
-- `/cost coach` shows the state; `/cost coach off` and `/cost coach on` switch it (or `AI_COST_COACH=0`).
-
-  ![/cost coach: what is on, and what each part does](docs/images/coach-4-status.png)
-
-- The prompt checks are patterns, not a model: they catch prompts that are plainly thin, not ones that are subtly
-  unclear. Questions, answers ("yes", "continue"), skills and anything naming a file, identifier, ticket, link,
-  number or quoted text are never flagged. Run over about 3,600 prompts from one developer's history, they flagged under 1%.
-
-### Strict mode: hold a thin prompt back
-
-```
-/cost coach strict off
-/cost coach strict on
-```
-
-On by default. In Copilot CLI a thin prompt (the last four rows above) is **not sent**. A banner says
-what is missing and how to phrase it:
-
-![Strict mode: a thin prompt held back with a banner, at 0 AI credits](docs/images/coach-2-strict.png)
-
-- No model call and no AI credits for the held prompt.
-- Sending the same prompt again runs it as written, so a wrong call never blocks you.
-- It applies every time, not once per session. The session tips (cache expired, long session) stay tips.
-- In VS Code's chat a stopped prompt shows nothing, so strict mode gives the tip there instead.
-- With strict mode off, a thin prompt runs as typed with a one-line tip above the answer, like the session tips.
-
-### Strict model: let a small model reword the held prompt
-
-```
-/cost coach strict model on
-/cost coach strict model off
-```
-
-Off by default, because each suggestion is a model call. With it on, the strict-mode banner also carries the prompt
-reworded by a small model, which is given the last few messages of the session so that "the bug" can become the
-file and error the session was about:
-
-![Strict model: the banner with a rewrite suggested by a small model](docs/images/coach-3-strict-model.png)
-
-- Send `y` and the suggestion runs in place of the held prompt. Where the session gives the model nothing to go
-  on (a first prompt), the suggestion comes back with `<placeholders>` to fill in, and `y` is not offered.
-- The model is `gpt-5-mini` (set `AI_COST_REWRITE_MODEL` for another). It runs as a separate one-off `copilot -p`
-  with no tools, no MCP servers and low reasoning: measured at 0.05 to 0.3 AI credits and 5 to 10 seconds, during
-  which Copilot shows its spinner. If it fails or takes over 45 seconds you get the plain banner.
-- It runs in a Copilot home of its own (`~/.ai-cost-drilldown/rewriter`), so these calls are **not** in the `/cost`
-  reports; each one is recorded with its credits in `~/.ai-cost-drilldown/rewrites.jsonl`.
-- The model is told never to invent file names or errors. It is still a model: read the suggestion before sending `y`.
-- Copilot CLI only, like strict mode.
+Earlier versions were installed as a Copilot CLI plugin (`copilot plugin install`). The extension replaces it. If
+the plugin is still installed, setting up Copilot tracking offers to remove it (it runs
+`copilot plugin uninstall ai-cost-drilldown`), and until it is gone the plugin's own hook answers prompts, so a
+prompt is never handled twice. The `/cost` command typed inside Copilot is no longer provided: the reports are in
+VS Code.
 
 ## Reading the numbers
 
-**Credits and dollars.** Credits are what Copilot recorded for each prompt. 1 AI credit = $0.01. The per-prompt views
-also price each model call at GitHub's published token prices, kept in `lib/copilot-prices.json` (copied from GitHub's
-[models and pricing](https://docs.github.com/en/copilot/reference/copilot-billing/models-and-pricing) page; its
-`fetched` date says how current it is). For models in that file the two agree to the cent. When GitHub changes a
-price or adds a model, edit the file; a model without an entry is marked unpriced.
+**Costs are estimates.** Claude Code's cost is each model's list price applied to the tokens in its transcript,
+scaled to the session total Claude Code recorded when it has one (a `~` marks an estimate). Copilot's cost per
+prompt is the AI credits Copilot recorded, at **$0.01 per credit**; each model call is priced at GitHub's published
+token prices (`lib/copilot-prices.json`), so the calls of a prompt may not add up to its credits to the cent. A model
+without a price shows "—". Subscription usage is not billed per token: these are list-price figures for comparing
+where the usage went.
 
-**Tokens, and the `~` mark.** Copilot's log has credits but not tokens. The plugin's extension records the tokens of
-every model call as it happens, in `~/.ai-cost-drilldown/copilot-tokens.jsonl`. Prompts it recorded show exact tokens
-and have the per-call views. Prompts it did not see (before it was installed, or with experimental mode off) show
-`~`estimates: the run's token total split across its prompts by credits. They cannot be recovered later.
-`/tokenlog` shows where the log is and how many calls the current session has recorded.
+**Cache.** Every model call re-sends the whole conversation, normally from a cheap cache. *Read from cache* is
+input served from it, *written to cache* is input stored for next time at a higher price, and *new input* is neither.
+A high cache hit means a conversation is being reused well; a prompt that starts with a miss pays full price for
+all of it.
 
-**Cache marks.** Every model call re-sends the whole conversation, normally from a cheap cache. A mark means it was
-re-sent at full price, which is often most of a prompt's cost:
+**Sources.** Claude Code is read from `~/.claude/projects/`, Copilot CLI from `~/.copilot/session-state/`, and VS Code
+Copilot Chat from VS Code's own storage.
 
-| Mark | Meaning |
-|---|---|
-| `⇄` | The prompt started on a different model than the previous one ended on |
-| `⏲` | The cache expired while idle (5 minutes for Claude models, 30 for GPT) |
-| `✕` | The cache was missed although the previous call was moments earlier |
+## Settings and commands
 
-**Time.** Active time is the agent working on your prompts. Up time is how long the session was open.
-
-## VS Code
-
-There are four different things, and they are covered differently:
-
-| What you use | Covered? | How |
+| Setting | Default | What it does |
 |---|---|---|
-| `copilot` in VS Code's integrated terminal | Fully | It is the normal CLI: everything on this page applies |
-| VS Code Copilot Chat (the chat panel) | In the cross-session reports | Read from VS Code's own chat storage; see below |
-| `/cost` and cost tips inside VS Code's chat | Yes, with the chat hook | Reports open in an editor tab; see below |
-| Running the reports from VS Code | Yes | As tasks: **Tasks: Run Task → "AI cost: …"** |
+| `aiCost.openOverviewOnSelect` | on | Open the overview in a tab when you select the AI Cost icon |
+| `aiCost.maxSessions` | 500 | How many recent Claude Code transcripts to read |
+| `aiCost.copilotDays` | 90 | How many days of Copilot CLI and VS Code chat history to load |
+| `aiCost.sources` | `claude`, `copilot` | Which tools to load sessions from |
+| `aiCost.refreshSeconds` | 60 | How often to read the logs again |
+| `aiCost.notifyHeldPrompts` | on | Show prompts that strict mode holds in VS Code chat as notifications. Off, VS Code chat gets a tip instead of a block |
 
-**VS Code Copilot Chat.** `/cost`, `/cost prompts` and `/cost epics` include its requests as sessions named `vs-…`.
-`--by source` splits Copilot CLI from VS Code chat, and `--source cli|vscode|all` picks one. Each request has tokens in
-and out, model, folder and elapsed time. It has AI credits only where VS Code recorded them, which is from mid-July
-2026; older requests show tokens and `?` for credits. There is no per-call view, no cache split and no prompt number
-for these rows. `/cost advise` looks at Copilot CLI sessions only, unless you pass `--source all`.
+Commands (Command Palette, **AI Cost: …**): Overview, Sync Sessions, Filter, Clear Filter, Sort, Set Up Copilot
+Tracking, Remove Copilot Tracking.
 
-**`/cost` in the chat.** With the chat hook installed, any `/cost …` command sent in VS Code's chat opens its report
-in an editor tab: built locally, no model call, no AI credits. The chat itself shows no reply (VS Code never displays
-what a hook answers). [Cost tips](#cost-tips-while-you-type) work there too.
+## Your data and privacy
 
-```bash
-node bin/vscode-hook.js         # the installer adds it by default
-```
+The extension reads session logs that already exist on your machine, which include your prompt text, folders and
+branch names. It sends nothing anywhere and needs no account or key. The one exception is **Strict model**, which
+sends the held prompt, the session's last few prompts, its last answer, the result of its last failed tool call and
+the branch name to a small model through your own `copilot` command.
 
-See [INSTALL.md](INSTALL.md#vs-code-chat).
-
-**Tasks.** The same reports are also available as tasks that run the scripts in a terminal:
-
-```bash
-node bin/vscode-tasks.js        # the installer adds them by default
-```
-
-They are: latest session, sessions, prompts (with views including "by source" and "VS Code chat only"), epics, advise,
-tools, and Claude Code. See [INSTALL.md](INSTALL.md#vs-code-tasks).
-
-## Claude Code
-
-Claude Code needs no install. Run the report from inside Claude Code with the `!` prefix, which executes a command
-directly without the model:
-
-```
-! node <clone>/bin/claude-cost.js                                  this session, last 20 prompts
-! node <clone>/bin/claude-cost.js --list                           recent sessions
-! node <clone>/bin/claude-cost.js --prompt 12                      one prompt: token split and every tool call
-! node <clone>/bin/claude-cost.js --prompts --since 30d --by project    across sessions (also day, model, session)
-! node <clone>/bin/claude-cost.js --epics                          cost per Jira epic (also --stories, --key, --unattributed)
-```
-
-It shows, per prompt: estimated cost, tokens, cache hit rate, model, tool calls, subagents, time and cache breaks.
-
-Costs are in dollars and are **estimates**. Claude Code records its own cost per model for a session; the report splits
-that across the session's prompts by weighted tokens, so the prompts add up to Claude Code's figure. Sessions without
-that figure use rates learned from the others, marked `~`. If you are on a subscription you are not billed per token,
-so read these as relative sizes.
-
-Tables are fitted to the terminal width (`--width N`); `--md` prints raw markdown for pasting into a document.
-
-## Cost per epic: how prompts are attributed
-
-Neither tool records which ticket a prompt was for, so `epics` works it out, in this order:
-
-1. The prompt names a ticket: `/design FOPTS-29970`.
-2. Otherwise it continues the session's current ticket ("yes", "accept it"), until an 8-hour gap.
-3. Otherwise the Jira calls it made point at one.
-4. Otherwise the git branch name contains one.
-
-Tickets are then rolled up to their epic using links found in the logs: a ticket created under a parent, or a Jira
-lookup that returned the parent and the issue type.
-
-What to keep in mind:
-
-- The header says how much of the spend was tied to a ticket and by which route. "Named in the prompt" is reliable;
-  "carried" and "branch" are inferences.
-- A session spent *discussing* tickets while working on something else is attributed to them too.
-- Stories, bugs and tasks whose epic the logs do not show are grouped in one `(no epic known)` row. `--stories` lists
-  them individually.
-- Only project prefixes seen in Jira calls or branch names count, so `UTF-8` or `ADR-15` are not treated as tickets.
+It writes nothing to those logs. Its own files are in `~/.ai-cost-drilldown/` (a cache of what it read, the coach
+settings, saved reports, and the token log when tracking is on); `AI_COST_HOME` changes that folder.
+[Copilot tracking](#copilot-tracking-and-cost-tips) is the only thing that writes outside it, and only after you
+agree.
 
 ## What it cannot do
 
-- **Recover tokens it did not record.** Per-call tokens exist only for calls made while the extension was loaded.
-- **Per-call detail for VS Code chat.** VS Code stores one total per request.
-- **Exact Claude Code cost per prompt.** It is an estimate from session totals.
-- **Bill-accurate totals.** It reports what the tools logged on this machine: not other machines, not what GitHub
-  finally invoices.
-- **A short command without experimental mode.** `/cost` needs it; `/ai-cost-drilldown:cost` does not.
+- **Recover tokens it did not record.** Per-call Copilot tokens exist only for calls made while tracking was on.
+- **Per-call detail for VS Code chat.** VS Code stores one total per request, so its sessions stop at the prompt.
+- **Show Claude's reasoning.** Claude Code's transcripts keep only a signature for it, so the Thinking box is empty.
+- **Go back past what the tools keep.** Claude Code deletes its own transcripts after about 30 days unless
+  `cleanupPeriodDays` in `~/.claude/settings.json` is raised, and only from then on.
+- **Bill-accurate totals.** It reports what the tools logged on this machine: not other machines, and not what is
+  finally invoiced.
+- **Show Copilot's full replies.** Copilot CLI's event log keeps tool requests and a short preview of each reply.
+- **Coach Claude Code.** Claude Code sessions are measured, but the coach (tips and strict mode) acts on Copilot sessions only:
+  Copilot CLI, and Copilot sessions running inside VS Code.
+- **Hold a prompt it was never shown.** The coach acts through a hook. If the hook cannot run, Copilot lets the prompt
+  through, which is why **AI Cost: Check Copilot Tracking** exists.
 
-Also not yet verified: the Windows hook command, and installing with `copilot plugin install` from this private
-repository's `main` branch.
+Checked in a live session: strict mode holding a prompt in a Copilot session running inside VS Code, with the
+notification and **Send anyway**. On Windows the hook is started from cmd.exe and PowerShell by the tests, on every pull request. Not yet checked: the classic
+Copilot Chat panel, a prompt held by the hook in a live Copilot session on Windows, and the token logger across Copilot
+CLI updates (Copilot's extensions are experimental).
 
 ## Develop
 
 ```bash
-npm test                                 # node --test, no dependencies
-node bin/cost.js prompts --since 7d      # the Copilot reports on the command line (--md for markdown)
-node bin/claude-cost.js --last 5         # the Claude Code report
+cd vscode-extension
+npm test                         # node --test, no dependencies
+node model.js 5                  # the Claude Code sessions, in the terminal
+node copilot.js 30               # the Copilot sessions of the last 30 days
+npm run package                  # build the .vsix into ../dist
+node scripts/screenshots.js      # redraw the images in docs/images (needs Chrome)
 ```
+
+To try the extension without installing it, open `vscode-extension/` in VS Code and press F5.
 
 | Path | What it is |
 |---|---|
-| `plugin.json`, `hooks.json` | The plugin manifest and the prompt hook |
-| `skills/cost/` | The `/ai-cost-drilldown:cost` command, and the fallback if the hook fails |
-| `extensions/ai-cost/` | The extension: `/cost`, `/tokenlog`, and the per-call token log |
-| `bin/` | `cost.js` (hook and command line), `claude-cost.js`, `install.js`, `install-extension.js`, `vscode-tasks.js`, `vscode-hook.js` |
-| `lib/` | Report code: sessions, prompts, tools, epics, advice, VS Code chat, Claude Code, table formatting, prices |
-| `test/` | Tests |
-
-Its own data (the token log and report caches) lives in `~/.ai-cost-drilldown/`; `AI_COST_HOME` changes that.
+| `vscode-extension/extension.js` | The views, panels, filter, sort, sync and Copilot tracking commands |
+| `vscode-extension/model.js`, `copilot.js`, `sources.js` | Sessions → prompts → calls → tools, from Claude Code and Copilot |
+| `vscode-extension/charts.js`, `sort.js`, `filter.js`, `advice.js`, `habits.js` | Charts (plain SVG), sort, filter, the advice rules and the unused-tools checks |
+| `vscode-extension/copilotsetup.js`, `coachsettings.js` | Copilot tracking setup and the coach switches |
+| `vscode-extension/scripts/` | `screenshots.js`, `demo-data.js` (the sample sessions), `bundle-runtime.js` |
+| `lib/` | The report code: session logs, prompts, tools, advice, VS Code chat storage, prices |
+| `bin/cost.js` | The Copilot hook (cost tips); the extension copies it when tracking is set up |
+| `extensions/ai-cost/` | The Copilot CLI token logger the extension installs |
+| `test/` | Tests for `lib/`, `bin/` and the logger |

@@ -1,0 +1,323 @@
+{
+  "name": "ai-cost-drilldown-vscode",
+  "displayName": "AI Cost Drilldown",
+  "description": "See where your AI spend goes, from a month down to a single tool call, for Claude Code, GitHub Copilot CLI and VS Code Copilot Chat.",
+  "version": "0.2.2",
+  "publisher": "flexera",
+  "license": "MIT",
+  "private": true,
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Visualization",
+    "Other"
+  ],
+  "main": "./extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "aiCost",
+          "title": "AI Cost",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "aiCost": [
+        {
+          "id": "aiCost.overview",
+          "type": "webview",
+          "name": "Overview"
+        },
+        {
+          "id": "aiCost.tree",
+          "name": "Sessions"
+        },
+        {
+          "id": "aiCost.advice",
+          "name": "Advice"
+        },
+        {
+          "id": "aiCost.coach",
+          "name": "Coach"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "aiCost.showTour",
+        "title": "AI Cost: Show Tour"
+      },
+      {
+        "command": "aiCost.enableCopilotTracking",
+        "title": "AI Cost: Set Up Copilot Tracking"
+      },
+      {
+        "command": "aiCost.checkCopilotTracking",
+        "title": "AI Cost: Check Copilot Tracking"
+      },
+      {
+        "command": "aiCost.disableCopilotTracking",
+        "title": "AI Cost: Remove Copilot Tracking"
+      },
+      {
+        "command": "aiCost.refresh",
+        "title": "AI Cost: Sync Sessions",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "aiCost.overview",
+        "title": "AI Cost: Overview",
+        "icon": "$(graph)"
+      },
+      {
+        "command": "aiCost.sort",
+        "title": "AI Cost: Sort",
+        "icon": "$(sort-precedence)"
+      },
+      {
+        "command": "aiCost.filter",
+        "title": "AI Cost: Filter",
+        "icon": "$(filter)"
+      },
+      {
+        "command": "aiCost.clearFilter",
+        "title": "AI Cost: Clear Filter",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "aiCost.showDetail",
+        "title": "AI Cost: Show Detail"
+      },
+      {
+        "command": "aiCost.toggleCoach",
+        "title": "AI Cost: Toggle Coach Setting"
+      },
+      {
+        "command": "aiCost.showAdvice",
+        "title": "AI Cost: Show Advice"
+      },
+      {
+        "command": "aiCost.coachResults",
+        "title": "AI Cost: Coach Results"
+      },
+      {
+        "command": "aiCost.editLimit",
+        "title": "AI Cost: Change Coach Limit"
+      },
+      {
+        "command": "aiCost.pauseStrict",
+        "title": "AI Cost: Pause Strict Mode"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "aiCost.overview",
+          "when": "view == aiCost.tree",
+          "group": "navigation@0"
+        },
+        {
+          "command": "aiCost.sort",
+          "when": "view == aiCost.tree",
+          "group": "navigation@0"
+        },
+        {
+          "command": "aiCost.filter",
+          "when": "view == aiCost.tree",
+          "group": "navigation@1"
+        },
+        {
+          "command": "aiCost.clearFilter",
+          "when": "view == aiCost.tree && aiCost.filtered",
+          "group": "navigation@2"
+        },
+        {
+          "command": "aiCost.refresh",
+          "when": "view == aiCost.tree || view == aiCost.advice",
+          "group": "navigation@3"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "AI Cost",
+      "properties": {
+        "aiCost.openOverviewOnSelect": {
+          "type": "boolean",
+          "default": true,
+          "description": "Open the full overview in an editor tab when you select the AI Cost icon."
+        },
+        "aiCost.maxSessions": {
+          "type": "number",
+          "default": 500,
+          "minimum": 1,
+          "description": "How many recent session transcripts to read. Sessions with no prompts are not listed."
+        },
+        "aiCost.copilotDays": {
+          "type": "number",
+          "default": 90,
+          "minimum": 1,
+          "description": "How many days of Copilot CLI and VS Code chat history to load."
+        },
+        "aiCost.sources": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "claude",
+              "copilot"
+            ]
+          },
+          "default": [
+            "claude",
+            "copilot"
+          ],
+          "description": "Which tools to load sessions from."
+        },
+        "aiCost.refreshSeconds": {
+          "type": "number",
+          "default": 60,
+          "minimum": 10,
+          "description": "How often to re-read the session logs."
+        },
+        "aiCost.notifyHeldPrompts": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show prompts that strict mode holds in VS Code chat as notifications, with Why, Send anyway and Copy prompt. Off, VS Code chat gets a tip instead of a block, because VS Code shows nothing for a stopped prompt."
+        }
+      }
+    },
+    "walkthroughs": [
+      {
+        "id": "aiCost.tour",
+        "title": "Get to know AI Cost Drilldown",
+        "description": "See where your AI spend goes, from a month down to a single tool call.",
+        "steps": [
+          {
+            "id": "overview",
+            "title": "See where the money goes",
+            "description": "The overview opens in a tab when you select the AI Cost icon: cost by month, split by tool (Claude Code, Copilot CLI, VS Code chat), with tiles, tokens, models and the most expensive prompts.\n[Open the overview](command:aiCost.overview)",
+            "media": {
+              "image": "images/vscode-1-overview-months.png",
+              "altText": "The overview: cost by month, split by tool"
+            },
+            "completionEvents": [
+              "onCommand:aiCost.overview"
+            ]
+          },
+          {
+            "id": "range",
+            "title": "Change the range, or leave a tool out",
+            "description": "Pick **By day**, 7d, 30d or 90d. Click a tool in the legend under the chart to leave it out and click again to bring it back. The tiles, the lists, the Sessions tree and Advice all follow.",
+            "media": {
+              "image": "images/vscode-1b-overview-by-day.png",
+              "altText": "By day, with Copilot CLI left out through the legend"
+            }
+          },
+          {
+            "id": "sidebar",
+            "title": "Keep it in the sidebar",
+            "description": "The AI Cost icon in the activity bar shows a compact overview, the Sessions tree, Advice and the Coach panel. Sort, filter and sync from the title bar.",
+            "media": {
+              "image": "images/vscode-2-sidebar-overview.png",
+              "altText": "The compact overview in the sidebar"
+            }
+          },
+          {
+            "id": "month",
+            "title": "Open a month",
+            "description": "Click a month, in the chart or the table, to see its days. A breadcrumb takes you back, and you can filter the Sessions tree to that month.",
+            "media": {
+              "image": "images/vscode-3-overview-month.png",
+              "altText": "One month, day by day"
+            }
+          },
+          {
+            "id": "session",
+            "title": "Open a session",
+            "description": "Click a session, in the tree or on a bar. You get its cost per prompt, where its tokens went, its models, and every prompt with tokens in and out, cache hit and cost.",
+            "media": {
+              "image": "images/vscode-4-session.png",
+              "altText": "A session: cost per prompt, tokens, models and prompts"
+            }
+          },
+          {
+            "id": "prompt",
+            "title": "Open a prompt",
+            "description": "A prompt shows the cost of each model call, the tools each call used, and every tool call it made. A breadcrumb and a Back button run along the top of every detail panel.",
+            "media": {
+              "image": "images/vscode-5-prompt.png",
+              "altText": "A prompt: its model calls and tool calls"
+            }
+          },
+          {
+            "id": "call",
+            "title": "Open a model call",
+            "description": "See what went in (what was new since the previous call) and what came out: the reply, the reasoning where it is recorded, and each tool request.",
+            "media": {
+              "image": "images/vscode-6-call.png",
+              "altText": "One model call: what went in and what came out"
+            }
+          },
+          {
+            "id": "tool",
+            "title": "Open a tool call",
+            "description": "Click any tool to see its full input and its result, with its status, size and time. It works for Claude Code and Copilot CLI.",
+            "media": {
+              "image": "images/vscode-7-tool.png",
+              "altText": "One tool call: its input and its result"
+            }
+          },
+          {
+            "id": "coach",
+            "title": "Cost tips, strict mode and the cost gate",
+            "description": "Turn on Copilot tracking to get cost tips, strict mode and per-call tokens for Copilot sessions. Strict mode holds a prompt that would restart a big cold cache, with its price, and a prompt you already ran. The Coach panel shows what it held and what you did next.\n[Set up Copilot tracking](command:aiCost.enableCopilotTracking)\n[Coach results](command:aiCost.coachResults)",
+            "media": {
+              "image": "images/vscode-8-coach-results.png",
+              "altText": "Coach results: what was held, what you did next"
+            },
+            "completionEvents": [
+              "onCommand:aiCost.enableCopilotTracking"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "bundle-runtime": "node scripts/bundle-runtime.js",
+    "package": "npm run bundle-runtime && npx @vscode/vsce package --no-rewrite-relative-links --out ../dist/"
+  },
+  "icon": "media/icon.png",
+  "keywords": [
+    "ai",
+    "cost",
+    "tokens",
+    "usage",
+    "copilot",
+    "claude",
+    "claude code",
+    "spend",
+    "budget",
+    "prompt cache"
+  ],
+  "galleryBanner": {
+    "color": "#1e1e1e",
+    "theme": "dark"
+  },
+  "preview": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/flexera/ai-cost-drilldown.git",
+    "directory": "vscode-extension"
+  },
+  "homepage": "https://github.com/flexera/ai-cost-drilldown#readme",
+  "bugs": {
+    "url": "https://github.com/flexera/ai-cost-drilldown/issues"
+  }
+}

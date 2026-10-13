@@ -4,9 +4,10 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { test } = require('node:test');
+const { pathToFileURL } = require('node:url');
 
 const MOD = path.join(__dirname, '..', 'extensions', 'ai-cost', 'cost-command.mjs');
-const load = () => import(MOD);
+const load = () => import(pathToFileURL(MOD).href); // a bare C: path is not a URL import() accepts
 
 /** A COPILOT_HOME with one session that has a log, so the reports have something to read. */
 function fixtureHome() {
@@ -45,10 +46,10 @@ test('without report code beside it (a copy made into ~/.copilot/extensions) it 
   const r = await answer('list', 'x', null);
   assert.strictEqual(r.level, 'warning');
   assert.match(r.text, /not next to this extension/);
-  assert.match(r.text, /ai-cost-drilldown:cost/);
+  assert.match(r.text, /AI Cost view in VS Code/);
 });
 
-test('loadReports finds bin/cost.js when the extension sits inside the plugin', async () => {
+test('loadReports finds bin/cost.js when the extension sits in the repository', async () => {
   const { loadReports } = await load();
   const reports = loadReports();
   assert.strictEqual(typeof reports.cost, 'function');

@@ -1,7 +1,7 @@
 // The /cost command of the ai-cost extension, apart from the Copilot SDK so it can be tested.
 //
-// It runs the same report code as the plugin's hook (bin/cost.js) inside the extension process. That code sits at
-// ../../bin/cost.js relative to this file when the extension ships inside the plugin; a copy made into
+// It runs the same report code as the hook (bin/cost.js) inside the extension process. That code sits at
+// ../../bin/cost.js relative to this file in the repository; the copy the VS Code extension installs into
 // ~/.copilot/extensions/ has no bin/ next to it, so there the command is unavailable (the logger still works).
 import { createRequire } from "node:module";
 
@@ -22,8 +22,8 @@ export function loadReports() {
  */
 export async function answer(argText, sessionId, reports = loadReports()) {
     if (!reports) {
-        return { text: "/cost: the report code is not next to this extension (it was copied out of the plugin). "
-            + "Install the plugin, or use /ai-cost-drilldown:cost.", level: "warning" };
+        return { text: "/cost: the report code is not next to this extension (it is the logger copy). "
+            + "Open the AI Cost view in VS Code for the reports.", level: "warning" };
     }
     try {
         return { text: String(await reports.cost(reports.splitArgs(argText), sessionId || null)), level: "info" };
