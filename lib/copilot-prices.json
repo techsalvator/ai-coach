@@ -1,0 +1,219 @@
+{
+ "source": "https://docs.github.com/en/copilot/reference/copilot-billing/models-and-pricing",
+ "fetched": "2026-09-30",
+ "unit": "USD per 1M tokens (default context tier; long-context rates are higher and not applied)",
+ "usdPerCredit": 0.01,
+ "note": "cacheWrite null = the provider does not price cache writes separately; they are charged as input.",
+ "models": {
+  "gpt-5-mini": {
+   "input": 0.25,
+   "cachedInput": 0.025,
+   "cacheWrite": null,
+   "output": 2.0
+  },
+  "gpt-5.3-codex": {
+   "input": 1.75,
+   "cachedInput": 0.175,
+   "cacheWrite": null,
+   "output": 14.0
+  },
+  "gpt-5.4": {
+   "input": 2.5,
+   "cachedInput": 0.25,
+   "cacheWrite": null,
+   "output": 15.0
+  },
+  "gpt-5.4-mini": {
+   "input": 0.75,
+   "cachedInput": 0.075,
+   "cacheWrite": null,
+   "output": 4.5
+  },
+  "gpt-5.4-nano": {
+   "input": 0.2,
+   "cachedInput": 0.02,
+   "cacheWrite": null,
+   "output": 1.25
+  },
+  "gpt-5.5": {
+   "input": 5.0,
+   "cachedInput": 0.5,
+   "cacheWrite": null,
+   "output": 30.0
+  },
+  "gpt-5.6-luna": {
+   "input": 0.2,
+   "cachedInput": 0.02,
+   "cacheWrite": 0.25,
+   "output": 1.2
+  },
+  "gpt-5.6-sol": {
+   "input": 4.0,
+   "cachedInput": 0.4,
+   "cacheWrite": 5.0,
+   "output": 20.0
+  },
+  "gpt-5.6-terra": {
+   "input": 2.0,
+   "cachedInput": 0.2,
+   "cacheWrite": 2.5,
+   "output": 12.0
+  },
+  "gpt-6-astra": {
+   "input": 10.0,
+   "cachedInput": 1.0,
+   "cacheWrite": 12.5,
+   "output": 50.0
+  },
+  "gpt-6-luna": {
+   "input": 0.1,
+   "cachedInput": 0.01,
+   "cacheWrite": 0.125,
+   "output": 0.5
+  },
+  "gpt-6-sol": {
+   "input": 2.0,
+   "cachedInput": 0.2,
+   "cacheWrite": 2.5,
+   "output": 10.0
+  },
+  "gpt-6.1-sol": {
+   "input": 2.0,
+   "cachedInput": 0.1,
+   "cacheWrite": 2.5,
+   "output": 10.0
+  },
+  "claude-haiku-4.5": {
+   "input": 1.0,
+   "cachedInput": 0.1,
+   "cacheWrite": 1.25,
+   "output": 5.0
+  },
+  "claude-sonnet-4": {
+   "input": 3.0,
+   "cachedInput": 0.3,
+   "cacheWrite": 3.75,
+   "output": 15.0
+  },
+  "claude-sonnet-4.6": {
+   "input": 3.0,
+   "cachedInput": 0.3,
+   "cacheWrite": 3.75,
+   "output": 15.0
+  },
+  "claude-opus-4.7": {
+   "input": 5.0,
+   "cachedInput": 0.5,
+   "cacheWrite": 6.25,
+   "output": 25.0
+  },
+  "claude-opus-4.8": {
+   "input": 5.0,
+   "cachedInput": 0.5,
+   "cacheWrite": 6.25,
+   "output": 25.0
+  },
+  "claude-opus-5": {
+   "input": 5.0,
+   "cachedInput": 0.5,
+   "cacheWrite": 6.25,
+   "output": 25.0
+  },
+  "claude-opus-5.5": {
+   "input": 4.0,
+   "cachedInput": 0.2,
+   "cacheWrite": 5.0,
+   "output": 20.0
+  },
+  "claude-sonnet-5": {
+   "input": 2.0,
+   "cachedInput": 0.2,
+   "cacheWrite": 2.5,
+   "output": 10.0
+  },
+  "claude-sonnet-5.5": {
+   "input": 2.0,
+   "cachedInput": 0.2,
+   "cacheWrite": 2.5,
+   "output": 10.0
+  },
+  "claude-opus-4.8-fast": {
+   "input": 10.0,
+   "cachedInput": 1.0,
+   "cacheWrite": 12.5,
+   "output": 50.0
+  },
+  "claude-fable-5": {
+   "input": 10.0,
+   "cachedInput": 1.0,
+   "cacheWrite": 12.5,
+   "output": 50.0
+  },
+  "claude-fable-5.1": {
+   "input": 10.0,
+   "cachedInput": 0.25,
+   "cacheWrite": 12.5,
+   "output": 50.0
+  },
+  "gemini-3.5-flash": {
+   "input": 1.5,
+   "cachedInput": 0.15,
+   "cacheWrite": null,
+   "output": 9.0
+  },
+  "gemini-3.6-flash": {
+   "input": 0.75,
+   "cachedInput": 0.075,
+   "cacheWrite": null,
+   "output": 3.75
+  },
+  "gemini-3.7-flash": {
+   "input": 0.75,
+   "cachedInput": 0.075,
+   "cacheWrite": null,
+   "output": 3.75
+  },
+  "gemini-3.8-flash": {
+   "input": 0.75,
+   "cachedInput": 0.075,
+   "cacheWrite": null,
+   "output": 3.75
+  },
+  "mai-code-1.1-flash": {
+   "input": 0.2,
+   "cachedInput": 0.02,
+   "cacheWrite": null,
+   "output": 1.2
+  },
+  "grok-4.5": {
+   "input": 2.0,
+   "cachedInput": 0.5,
+   "cacheWrite": null,
+   "output": 6.0
+  },
+  "grok-4.6": {
+   "input": 2.0,
+   "cachedInput": 0.5,
+   "cacheWrite": null,
+   "output": 6.0
+  },
+  "grok-4.7": {
+   "input": 2.0,
+   "cachedInput": 0.5,
+   "cacheWrite": null,
+   "output": 6.0
+  },
+  "kimi-k2.7-code": {
+   "input": 0.95,
+   "cachedInput": 0.19,
+   "cacheWrite": null,
+   "output": 4.0
+  },
+  "kimi-k3": {
+   "input": 3.0,
+   "cachedInput": 0.3,
+   "cacheWrite": null,
+   "output": 15.0
+  }
+ }
+}

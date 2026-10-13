@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "hooks": {
+    "userPromptSubmitted": [
+      {
+        "type": "command",
+        "bash": "node bin/cost.js hook",
+        "powershell": "node bin/cost.js hook",
+        "timeoutSec": 120
+      }
+    ]
+  }
+}
