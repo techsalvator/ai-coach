@@ -1,0 +1,128 @@
+name: VS Code extension
+
+# Every pull request and push to main: tests, and the VSIX built and kept as a build artifact.
+# A push to main whose version in vscode-extension/package.json has no release yet: the same, then a GitHub Release
+# vscode-v<version> on that commit, with the VSIX attached and the CHANGELOG section as the notes.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vscode-extension-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # A pull request that changes what the extension ships must bump the version and describe it in the CHANGELOG.
+  # Make this check required in the branch protection of main to make it a hard gate.
+  version:
+    name: Version bump
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node vscode-extension/scripts/check-version.js "origin/${{ github.base_ref }}"
+
+  # The hook is set up and started differently on each system (which shell runs it, where node is), so the tests run on
+  # the two the extension is used on as well. The Windows run is the only place the hook is started from cmd.exe and PowerShell.
+  test:
+    name: Tests (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Tests (repo)
+        shell: bash
+        run: node --test test/*.test.js
+      - name: Tests (extension)
+        shell: bash
+        working-directory: vscode-extension
+        run: node --test test/*.test.js
+
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Version
+        id: version
+        run: echo "version=$(node -p "require('./vscode-extension/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Tests (repo)
+        run: node --test test/*.test.js
+
+      - name: Tests (extension)
+        working-directory: vscode-extension
+        run: npm test
+
+      - name: Package the VSIX
+        working-directory: vscode-extension
+        run: npm run package
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vsix
+          path: dist/*.vsix
+          if-no-files-found: error
+
+  release:
+    # Only from main (a merge, or a manual run on main), never from a pull request.
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: vscode-v${{ needs.build.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Is there a release for this version already?
+        id: existing
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Skipped: $TAG is already released. Bump the version in vscode-extension/package.json (and add its CHANGELOG section) to release again." | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Release notes from the CHANGELOG
+        if: steps.existing.outputs.exists == 'false'
+        run: node vscode-extension/scripts/release-notes.js "${{ needs.build.outputs.version }}" > notes.md
+
+      - uses: actions/download-artifact@v4
+        if: steps.existing.outputs.exists == 'false'
+        with:
+          name: vsix
+          path: dist
+
+      - name: Create the release
+        if: steps.existing.outputs.exists == 'false'
+        run: |
+          gh release create "$TAG" dist/*.vsix \
+            --target "$GITHUB_SHA" \
+            --title "AI Cost Coach ${{ needs.build.outputs.version }}" \
+            --notes-file notes.md
+          echo "Released $TAG" >> "$GITHUB_STEP_SUMMARY"
