@@ -16,10 +16,11 @@ the `.vsix` from the [releases](https://github.com/flexera/ai-cost-drilldown/rel
 
 ```bash
 gh release download --repo flexera/ai-cost-drilldown --pattern '*.vsix'
-code --install-extension ai-cost-drilldown-vscode-*.vsix
+code --install-extension ai-cost-coach-*.vsix
 ```
 
-Then run **Developer: Reload Window**. Your Claude Code and Copilot sessions load by themselves: no sign-in, no key.
+Then run **Developer: Reload Window**. The extension's ID is `techselva.ai-cost-coach`; if you had AI Cost Drilldown
+(`flexera.ai-cost-drilldown-vscode`) installed, uninstall it, or both will run. Your Claude Code and Copilot sessions load by themselves: no sign-in, no key.
 To update, install the newer file over it. Coming from the old Copilot CLI plugin? Setting up Copilot tracking offers to
 remove it; the `/cost` command inside Copilot is gone, the reports are in VS Code.
 

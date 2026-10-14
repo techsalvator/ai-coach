@@ -2,6 +2,20 @@
 
 All notable changes to the AI Cost Coach extension (called AI Cost Drilldown up to 0.2.2). Versions follow semver.
 
+## 0.2.4 (2026-10-14)
+
+### Changed
+
+- **A new extension ID: `techselva.ai-cost-coach`** (publisher `techselva`, name `ai-cost-coach`; it was
+  `flexera.ai-cost-drilldown-vscode`). VS Code sees a different extension, so it does not update the old one: uninstall
+  AI Cost Drilldown / AI Cost Coach 0.2.3 and earlier, or both run and show two sets of views. The `aiCost.*` settings,
+  the coach's files in `~/.ai-cost-drilldown/` and the Copilot hook are unchanged, so your settings carry over. The
+  `.vsix` is now `ai-cost-coach-<version>.vsix`.
+
+### Fixed
+
+- **The tour opens by the extension's own ID** instead of a fixed one, so **AI Cost: Show Tour** keeps working under any ID.
+
 ## 0.2.3 (2026-10-14)
 
 ### Fixed

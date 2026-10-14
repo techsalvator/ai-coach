@@ -835,7 +835,10 @@ function offerSetup(ctx) {
   }, 4000);
 }
 
+let extensionId = 'techselva.ai-cost-coach'; // the walkthrough is opened by the extension's own id
+
 function activate(ctx) {
+  if (ctx.extension && ctx.extension.id) extensionId = ctx.extension.id;
   extensionUri = ctx.extensionUri;
   const bar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
   bar.command = 'aiCost.overview'; bar.text = '$(credit-card) AI …'; bar.show();
@@ -897,7 +900,7 @@ function activate(ctx) {
     vscode.commands.registerCommand('aiCost.checkCopilotTracking', checkTracking),
     vscode.window.registerWebviewViewProvider('aiCost.overview', overviewView),
     vscode.commands.registerCommand('aiCost.overview', () => showOverview(true)),
-    vscode.commands.registerCommand('aiCost.showTour', () => vscode.commands.executeCommand('workbench.action.openWalkthrough', 'flexera.ai-cost-drilldown-vscode#aiCost.tour', false)),
+    vscode.commands.registerCommand('aiCost.showTour', () => vscode.commands.executeCommand('workbench.action.openWalkthrough', `${extensionId}#aiCost.tour`, false)),
     vscode.commands.registerCommand('aiCost.sort', editSort),
     vscode.commands.registerCommand('aiCost.filter', editFilter),
     vscode.commands.registerCommand('aiCost.clearFilter', () => { filter = { ...F.EMPTY }; recompute(); }),
