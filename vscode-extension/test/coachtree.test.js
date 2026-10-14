@@ -9,6 +9,8 @@ const path = require('path');
 const Module = require('module');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aicost-coachtree-'));
+process.env.HOME = root; // the legacy token log (~/.phantomflow) is under it too: none of this machine's own data
+process.env.USERPROFILE = root;
 process.env.AI_COST_HOME = path.join(root, 'data');
 process.env.COPILOT_HOME = path.join(root, 'copilot');
 fs.mkdirSync(process.env.COPILOT_HOME, { recursive: true });

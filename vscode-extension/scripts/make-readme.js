@@ -15,7 +15,7 @@ const path = require('path');
 const DROP = ['Install', 'Develop']; // sections of the repository README that do not belong on the extension's page
 const IMAGE_LINE = /^\s*!\[[^\]]*\]\([^)]*\)\s*$/;
 const SCREENS_NOTE = /\*Every screen in this README is one of the extension's own panels[^*]*\*/; // the sentence wraps over two lines
-const TOUR_NOTE = '*The screens are in the tour: run **AI Cost: Show Tour** from the Command Palette, or open Help → Get Started → AI Cost Drilldown. They are made-up sample sessions, so nothing in them comes from anyone\'s real logs.*';
+const TOUR_NOTE = '*The screens are in the tour: run **AI Cost: Show Tour** from the Command Palette, or open Help → Get Started → AI Cost Coach. They are made-up sample sessions, so nothing in them comes from anyone\'s real logs.*';
 
 /**
  * The extension README for the text of the repository README.

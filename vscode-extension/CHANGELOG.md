@@ -1,6 +1,24 @@
 # Changelog
 
-All notable changes to the AI Cost Drilldown extension. Versions follow semver.
+All notable changes to the AI Cost Coach extension (called AI Cost Drilldown up to 0.2.2). Versions follow semver.
+
+## 0.2.3 (2026-10-14)
+
+### Fixed
+
+- **The detail panel opens as a tab, not a new split.** It used to open "beside", which made a new editor group to the
+  right. It is now a tab in the overview's group (or the group you are in, with no overview open).
+- **Selecting a session, prompt or call brings the detail tab forward.** The detail panel is opened once and reused, so
+  with it already open (behind another tab, or in another column) a new selection changed its content but left it hidden.
+  It is revealed now, and the focus stays in the tree.
+
+### Changed
+
+- **The extension is now called AI Cost Coach** (it was AI Cost Drilldown): the Extensions view, the tour, the README and the
+  release titles. The extension ID (`flexera.ai-cost-drilldown-vscode`) and the `aiCost.*` settings are unchanged, so it
+  updates in place and keeps your settings. Commands keep the short `AI Cost:` prefix.
+- The repository, homepage and issues links on the extension's Details page now point to
+  https://github.com/techsalvator/ai-coach.
 
 ## 0.2.2 (2026-10-11)
 

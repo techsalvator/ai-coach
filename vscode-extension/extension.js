@@ -693,7 +693,8 @@ async function showDetail(path) {
   await showNode(ss, p, c);
 }
 function openHtml(title, html) {
-  if (!panel) { panel = vscode.window.createWebviewPanel('aiCostDetail', 'AI Cost', { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true }, { enableScripts: true }); panel.onDidDispose(() => { panel = undefined; trail = []; }); panel.webview.onDidReceiveMessage(onDrill); }
+  if (!panel) { panel = vscode.window.createWebviewPanel('aiCostDetail', 'AI Cost', { viewColumn: (overviewPanel && overviewPanel.viewColumn) || vscode.ViewColumn.Active, preserveFocus: true }, { enableScripts: true }); panel.onDidDispose(() => { panel = undefined; trail = []; }); panel.webview.onDidReceiveMessage(onDrill); }
+  else panel.reveal(undefined, true); // already open, maybe behind another tab of its group: bring it forward, and leave the focus in the tree
   panel.title = title;
   panel.webview.html = html;
 }

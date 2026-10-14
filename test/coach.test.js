@@ -15,7 +15,7 @@ const line = (type, at, data = {}) => JSON.stringify({ type, data, id: 'x', time
 /** A sandbox: Copilot home with one session of `prompts` prompts whose last answer was `idleMs` ago. */
 function sandbox({ prompts = 0, idleMs = 60e3, model = 'claude-sonnet-4.6' } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'coach-'));
-  const env = { ...process.env, COPILOT_HOME: path.join(root, 'copilot'), AI_COST_HOME: path.join(root, 'cost') };
+  const env = { ...process.env, HOME: root, USERPROFILE: root, COPILOT_HOME: path.join(root, 'copilot'), AI_COST_HOME: path.join(root, 'cost') };
   delete env.AI_COST_COACH;
   const dir = path.join(env.COPILOT_HOME, 'session-state', 's1');
   fs.mkdirSync(dir, { recursive: true });

@@ -1,8 +1,8 @@
 {
   "name": "ai-cost-drilldown-vscode",
-  "displayName": "AI Cost Drilldown",
+  "displayName": "AI Cost Coach",
   "description": "See where your AI spend goes, from a month down to a single tool call, for Claude Code, GitHub Copilot CLI and VS Code Copilot Chat.",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "publisher": "flexera",
   "license": "MIT",
   "private": true,
@@ -194,7 +194,7 @@
     "walkthroughs": [
       {
         "id": "aiCost.tour",
-        "title": "Get to know AI Cost Drilldown",
+        "title": "Get to know AI Cost Coach",
         "description": "See where your AI spend goes, from a month down to a single tool call.",
         "steps": [
           {
@@ -313,11 +313,11 @@
   "preview": true,
   "repository": {
     "type": "git",
-    "url": "https://github.com/flexera/ai-cost-drilldown.git",
+    "url": "https://github.com/techsalvator/ai-coach.git",
     "directory": "vscode-extension"
   },
-  "homepage": "https://github.com/flexera/ai-cost-drilldown#readme",
+  "homepage": "https://github.com/techsalvator/ai-coach#readme",
   "bugs": {
-    "url": "https://github.com/flexera/ai-cost-drilldown/issues"
+    "url": "https://github.com/techsalvator/ai-coach/issues"
   }
 }
