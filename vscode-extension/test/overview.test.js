@@ -123,3 +123,13 @@ test('the overview shows an estimated CO2e tile, labelled as an estimate', () =>
   assert.match(html, /~[\d.]+ (g|kg)</);
   assert.match(html, /not GreenPixie/);
 });
+
+test('CO2e, electricity and water sit under a Sustainability header', () => {
+  ext.load(sessions, { days: 0 });
+  const html = page();
+  const at = html.indexOf('<h3>Sustainability</h3>');
+  assert.ok(at > 0);
+  const section = html.slice(at, html.indexOf('</div></div>', at) + 12);
+  for (const k of ['CO₂e (est.)', 'Electricity (est.)', 'Water (est.)']) assert.ok(section.includes(k), k);
+  assert.ok(!html.slice(0, at).includes('Water (est.)'), 'not in the main tile row');
+});
