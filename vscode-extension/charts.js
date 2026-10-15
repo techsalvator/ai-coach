@@ -191,4 +191,4 @@ function monthTotals(sessions) {
   return [...by.values()].sort((a, b) => (a.month < b.month ? 1 : -1)).map((m) => ({ ...m, sessions: m.ids.size }));
 }
 
-module.exports = { monthTotals, monthName, CSS, TIP_SCRIPT, DRILL_SCRIPT, columns, composition, hbars, legend, tokenSegments, dailyCost, niceMax, SOURCE_SLOT };
+module.exports = { monthKey, monthTotals, monthName, CSS, TIP_SCRIPT, DRILL_SCRIPT, columns, composition, hbars, legend, tokenSegments, dailyCost, niceMax, SOURCE_SLOT };

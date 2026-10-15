@@ -146,3 +146,21 @@ test('each Sustainability tile explains its calculation on hover', () => {
   assert.match(tips[1], /From [\d,]+ model calls?/);
   assert.match(tips[2], /L per kWh/);
 });
+
+test('the overview tiles include this month, with this month\'s cost for each harness', () => {
+  ext.load(sessions, { days: 0 });
+  const html = page();
+  const tile = (label) => (new RegExp(`<span>${label}</span><b>([^<]*)</b>`).exec(html) || [])[1];
+  for (const k of ['Total cost', 'Today', 'This month', 'Sessions', 'Cache hit']) assert.ok(tile(k) != null, k);
+  assert.ok(html.includes('<h3>This month by harness</h3>'));
+  const at = html.indexOf('<h3>This month by harness</h3>');
+  const section = html.slice(at, html.indexOf('</div></div>', at) + 12);
+  const names = [...section.matchAll(/<span>([^<]*)<\/span><b>\$/g)].map((m) => m[1]);
+  assert.ok(names.length >= 2, `a tile per harness (${names})`);
+  const cost = (v) => Number(String(v).replace('$', ''));
+  const sum = [...section.matchAll(/<span>[^<]*<\/span><b>(\$[\d.]+)<\/b>/g)].reduce((a, m) => a + cost(m[1]), 0);
+  assert.ok(Math.abs(sum - cost(tile('This month'))) < 0.01, 'the harnesses add up to this month');
+  drill({ kind: 'month', value: '2026-09' });
+  assert.ok(!page().includes('This month by harness'), 'not inside a single month');
+  drill({ kind: 'month', value: '' });
+});

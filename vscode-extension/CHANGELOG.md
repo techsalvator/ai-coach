@@ -6,6 +6,9 @@ All notable changes to the AI Cost Coach extension (called AI Cost Drilldown up 
 
 ### Added
 
+- **A "This month" tile on the overview, and this month's cost for each harness.** The tiles are now Total cost, Today,
+  This month, Sessions and Cache hit; under them, "This month by harness" gives Claude Code, Copilot CLI and VS Code
+  chat a tile each (they add up to This month). Both follow the harness chips, and neither shows inside a single month.
 - **Each Sustainability figure now says how it was worked out.** Hover the CO₂e, electricity or water tile (overview,
   session, prompt and model-call screens) to see the sum with the actual numbers: the output, fresh input, cache
   read and cache write tokens behind it, the energy factor for the model size, the data-centre overhead (PUE), then the
