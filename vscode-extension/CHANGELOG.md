@@ -2,6 +2,31 @@
 
 All notable changes to the AI Cost Coach extension (called AI Cost Drilldown up to 0.2.2). Versions follow semver.
 
+## 0.3.1 (2026-10-15)
+
+### Added
+
+- **The range buttons moved next to the chart they change.** They sat in the top line beside "Sync sessions" but only
+  changed the cost chart, so they now sit on the right of the chart's heading, as **Month · Day · 30d** (7d and 90d are
+  gone: Day already reaches any day).
+- **A "This month" tile on the overview, and this month's cost for each harness.** The tiles are now Total cost, Today,
+  This month, Sessions and Cache hit; under them, "This month by harness" gives Claude Code, Copilot CLI and VS Code
+  chat a tile each (they add up to This month). Both follow the harness chips, and neither shows inside a single month.
+- **Each Sustainability figure now says how it was worked out.** Hover the CO₂e, electricity or water tile (overview,
+  session, prompt and model-call screens) to see the sum with the actual numbers: the output, fresh input, cache
+  read and cache write tokens behind it, the energy factor for the model size, the data-centre overhead (PUE), then the
+  grid (g CO₂e per kWh) and water (L per kWh) factors, down to the figure on the tile.
+
+### Changed
+
+- **ai-cost-drilldown is now ai-cost-coach everywhere:** the Copilot CLI plugin (so the skill is `/ai-cost-coach:cost`),
+  the package, the hook file (`~/.copilot/hooks/ai-cost-coach.json`), the data folder (`~/.ai-cost-coach/`), the labels
+  the coach puts on its notices, the docs and the repository links (now `techsalvator/ai-coach`). Nothing is lost on
+  upgrade: an existing `~/.ai-cost-drilldown/` folder keeps being used, the earlier-named hook file is moved to the new
+  name (never left beside it, which would answer every prompt twice), `/ai-cost-drilldown:cost` is still understood, and
+  an old plugin installed under either name is still found and can be removed. This list's earlier entries keep the old
+  names, as they were then.
+
 ## 0.3.0 (2026-10-15)
 
 ### Added

@@ -80,7 +80,7 @@ test('hook, strict off: a tip goes out as additionalContext, never as a block; p
   const hook = (input) => spawnSync(process.execPath, [BIN, 'hook'], { input: JSON.stringify(input), encoding: 'utf8', env });
   const out = JSON.parse(hook({ sessionId: 's1', prompt: 'still not working' }).stdout);
   assert.deepStrictEqual(Object.keys(out), ['additionalContext']);
-  assert.match(out.additionalContext, /Cost tip \(ai-cost-drilldown\):\*\* a short retry/);
+  assert.match(out.additionalContext, /Cost tip \(ai-cost-coach\):\*\* a short retry/);
   assert.strictEqual(hook({ sessionId: 's1', prompt: 'still not working' }).stdout, '', 'once per session');
   assert.strictEqual(hook({ sessionId: 's1', prompt: 'please review this PR' }).stdout, '');
 });
@@ -99,7 +99,7 @@ test('hook in VS Code (snake_case input): tips work, /cost is not blocked becaus
   assert.match(fs.readFileSync(file, 'utf8'), /^\/cost help {3}\(.*\)\n\n[^]*\/cost prompt N calls/);
   // the switch works from the chat itself: applied locally, confirmed by the model in one line
   const off = JSON.parse(hook({ hook_event_name: 'UserPromptSubmit', session_id: 's2', prompt: '/cost coach off' }).stdout);
-  assert.match(off.modifiedPrompt, /Cost tips \(ai-cost-drilldown\) are off; strict mode is off; strict model is off\./);
+  assert.match(off.modifiedPrompt, /Cost tips \(ai-cost-coach\) are off; strict mode is off; strict model is off\./);
   assert.strictEqual(hook({ hook_event_name: 'UserPromptSubmit', session_id: 's2', prompt: 'try again' }).stdout, '');
   assert.match(JSON.parse(hook({ hook_event_name: 'UserPromptSubmit', session_id: 's2', prompt: '/cost coach on' }).stdout).modifiedPrompt, /are on; strict mode is on; strict model is off\./);
   assert.match(JSON.parse(hook({ hook_event_name: 'UserPromptSubmit', session_id: 's2', prompt: 'try again' }).stdout).modifiedPrompt, /a short retry/);
@@ -108,7 +108,7 @@ test('hook in VS Code (snake_case input): tips work, /cost is not blocked becaus
 test('the --vscode hook in Copilot CLI stays silent while the old plugin is installed, and answers like a plugin hook otherwise', () => {
   const { env } = sandbox({ prompts: 1 });
   const run = (prompt) => spawnSync(process.execPath, [BIN, 'hook', '--vscode'], { input: JSON.stringify({ hook_event_name: 'UserPromptSubmit', session_id: 's1', prompt }), encoding: 'utf8', env: { ...env, COPILOT_CLI_BINARY_VERSION: '1.0.90' } }).stdout;
-  const plugin = path.join(env.COPILOT_HOME, 'installed-plugins', '_direct', 'ai-cost-drilldown');
+  const plugin = path.join(env.COPILOT_HOME, 'installed-plugins', '_direct', 'ai-cost-coach');
   fs.mkdirSync(plugin, { recursive: true });
   assert.strictEqual(run('try again'), '', 'the plugin\'s own hook answers');
   assert.strictEqual(run('/cost help'), '');
@@ -564,7 +564,7 @@ test('strict mode: a thin prompt is held back with a banner every time; the same
   assert.match(coach.command([], env), /Strict mode is \*\*on\*\*/);
   const held = JSON.parse(hook('fix the bug'));
   assert.strictEqual(held.decision, 'block');
-  assert.match(held.reason, /Prompt check \(ai-cost-drilldown\): not sent\.[^]*mentions a problem[^]*In `<file or function>`[^]*send the same prompt again[^]*\/cost coach strict off/);
+  assert.match(held.reason, /Prompt check \(ai-cost-coach\): not sent\.[^]*mentions a problem[^]*In `<file or function>`[^]*send the same prompt again[^]*\/cost coach strict off/);
   assert.strictEqual(hook('fix the bug'), '', 'sent again as written: it runs, with no tip');
   assert.strictEqual(JSON.parse(hook('fix the bug')).decision, 'block', 'a later thin prompt is held again');
   assert.strictEqual(JSON.parse(hook('clean up the code')).decision, 'block', 'a different thin prompt is not a resend');

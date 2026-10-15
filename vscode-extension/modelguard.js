@@ -11,7 +11,12 @@ const Quota = require('./quota');
 const RELEASE = 0.95;        // active until the month is projected under this share of the plan: no flapping at the line
 const DEFAULT_THRESHOLD = 2; // requests a prompt at or over which a model counts as expensive
 
-const dataDir = (env = process.env) => env.AI_COST_HOME || env.COPILOT_COST_HOME || path.join(os.homedir(), '.ai-cost-drilldown');
+/** ~/.ai-cost-coach, except that an existing ~/.ai-cost-drilldown (the folder's earlier name) keeps being used. */
+const defaultHome = (home = os.homedir()) => {
+  const earlier = path.join(home, '.ai-cost-drilldown');
+  return !fs.existsSync(path.join(home, '.ai-cost-coach')) && fs.existsSync(earlier) ? earlier : path.join(home, '.ai-cost-coach');
+};
+const dataDir = (env = process.env) => env.AI_COST_HOME || env.COPILOT_COST_HOME || defaultHome();
 const stateFile = (env = process.env) => path.join(dataDir(env), 'model-guard.json');
 
 /**

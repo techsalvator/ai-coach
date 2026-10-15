@@ -46,7 +46,7 @@ function run(argv, env = process.env) {
   for (const f of files) fs.copyFileSync(path.join(SRC, f), path.join(dst, f));
   const out = [`Installed ${files.length} files to ${dst}.`,
     'Extensions are experimental in Copilot CLI: start `copilot --experimental`, or run `/experimental on` once.',
-    'Check it with /tokenlog in a session. Records go to ~/.ai-cost-drilldown/copilot-tokens.jsonl.'];
+    'Check it with /tokenlog in a session. Records go to ~/.ai-cost-coach/copilot-tokens.jsonl.'];
   if (fs.existsSync(path.join(root, 'phantomflow-cost'))) {
     out.push('The PhantomFlow cost extension is installed too and logs the same events elsewhere; the reports read both and count each call once.');
   }

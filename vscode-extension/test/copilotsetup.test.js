@@ -86,7 +86,7 @@ test('an old hook file that points into the plugin is reported as another setup,
   const e = env();
   const hook = S.paths(e).hook;
   fs.mkdirSync(path.dirname(hook), { recursive: true });
-  fs.writeFileSync(hook, JSON.stringify({ hooks: { UserPromptSubmit: [{ type: 'command', command: 'node "/x/installed-plugins/_direct/ai-cost-drilldown/bin/cost.js" hook --vscode' }] } }));
+  fs.writeFileSync(hook, JSON.stringify({ hooks: { UserPromptSubmit: [{ type: 'command', command: 'node "/x/installed-plugins/_direct/ai-cost-coach/bin/cost.js" hook --vscode' }] } }));
   assert.strictEqual(S.status(e).hookTarget, 'other');
   S.enable(e);
   assert.strictEqual(S.status(e).hookTarget, 'runtime');
@@ -95,11 +95,11 @@ test('an old hook file that points into the plugin is reported as another setup,
 test('the old plugin is detected, and removing it goes through the copilot command', () => {
   const e = env();
   assert.strictEqual(S.status(e).plugin, false);
-  fs.mkdirSync(path.join(e.COPILOT_HOME, 'installed-plugins', '_direct', 'ai-cost-drilldown'), { recursive: true });
+  fs.mkdirSync(path.join(e.COPILOT_HOME, 'installed-plugins', '_direct', 'ai-cost-coach'), { recursive: true });
   assert.strictEqual(S.status(e).plugin, true);
   const calls = [];
   const r = S.removePlugin(e, (cmd, args) => { calls.push([cmd, ...args]); return { status: 0, stdout: 'Uninstalled', stderr: '' }; });
-  assert.deepStrictEqual(calls, [['copilot', 'plugin', 'uninstall', 'ai-cost-drilldown']]);
+  assert.deepStrictEqual(calls, [['copilot', 'plugin', 'uninstall', 'ai-cost-coach']]);
   assert.deepStrictEqual([r.ok, r.output], [true, 'Uninstalled']);
   assert.strictEqual(S.removePlugin(e, () => ({ error: new Error('ENOENT'), status: null })).ok, false);
 });
@@ -114,8 +114,8 @@ test('findNode prefers a stable link on the PATH, and the hook is written with t
   const shown = fake.replace(/\\/g, '/'); // the hook file always has forward slashes
   fs.writeFileSync(fake, '#!/bin/sh\n'); fs.chmodSync(fake, 0o755);
   assert.strictEqual(S.findNode({ PATH: `/nonexistent${path.delimiter}${dir}` }), fake);
-  const cmd = S.hookContent('/home/u/.ai-cost-drilldown/runtime', fake, 'linux').hooks.UserPromptSubmit[0].command;
-  assert.strictEqual(cmd, `"${shown}" "/home/u/.ai-cost-drilldown/runtime/bin/cost.js" hook --vscode`);
+  const cmd = S.hookContent('/home/u/.ai-cost-coach/runtime', fake, 'linux').hooks.UserPromptSubmit[0].command;
+  assert.strictEqual(cmd, `"${shown}" "/home/u/.ai-cost-coach/runtime/bin/cost.js" hook --vscode`);
   assert.ok(S.hookContent('/r', null).hooks.UserPromptSubmit[0].command.startsWith('node '), 'with no node found it stays the old bare command');
   const e = env();
   const w = S.enable({ ...e, PATH: `${dir}${path.delimiter}${process.env.PATH}` });
@@ -171,8 +171,8 @@ test('a changed script is noticed under the same version: the runtime is refresh
 
 test('on Windows the hook names hook.cmd: a bare path where it has no space, through cmd where it has one', () => {
   const cmd = (runtime) => S.hookContent(runtime, 'C:\\Program Files\\nodejs\\node.exe', 'win32').hooks.UserPromptSubmit[0].command;
-  assert.strictEqual(cmd('C:\\Users\\u\\.ai-cost-drilldown\\runtime'), 'C:/Users/u/.ai-cost-drilldown/runtime/hook.cmd', 'forward slashes, no quotes: cmd.exe, PowerShell and Git Bash all run it');
-  assert.strictEqual(cmd('C:\\Users\\a b\\.ai-cost-drilldown\\runtime'), 'cmd /d /c "C:\\Users\\a b\\.ai-cost-drilldown\\runtime\\hook.cmd"');
+  assert.strictEqual(cmd('C:\\Users\\u\\.ai-cost-coach\\runtime'), 'C:/Users/u/.ai-cost-coach/runtime/hook.cmd', 'forward slashes, no quotes: cmd.exe, PowerShell and Git Bash all run it');
+  assert.strictEqual(cmd('C:\\Users\\a b\\.ai-cost-coach\\runtime'), 'cmd /d /c "C:\\Users\\a b\\.ai-cost-coach\\runtime\\hook.cmd"');
   assert.strictEqual(S.shimContent('C:\\Program Files\\nodejs\\node.exe'), '@echo off\r\n"C:\\Program Files\\nodejs\\node.exe" "%~dp0bin\\cost.js" hook --vscode\r\n');
   assert.ok(S.hookContent('C:\\r', null, 'win32').hooks.UserPromptSubmit[0].command.startsWith('node '), 'no node found: the bare command, which status reports');
   assert.strictEqual(S.hookContent('/home/u/rt', '/usr/bin/node', 'darwin').hooks.UserPromptSubmit[0].command, '"/usr/bin/node" "/home/u/rt/bin/cost.js" hook --vscode', 'macOS and Linux are unchanged');
@@ -215,4 +215,17 @@ test('the Windows check is not fooled by a shell that exits 0 without running th
   assert.match(quiet.output, /^cmd\.exe: it exited without running the hook\nPowerShell: it exited without running the hook$/);
   const half = S.checkWindows('x', tmp, (c) => (c === 'powershell.exe' ? { status: 1, stdout: '', stderr: 'At line:1 char:36\r\n+ "a" "b" hook\r\n+     ~~~\r\nUnexpected token \'"b"\' in expression or statement.\r\n' } : { status: 0, stdout: ran, stderr: '' }));
   assert.deepStrictEqual([half.ok, half.status, half.output], [false, 1, 'PowerShell: Unexpected token \'"b"\' in expression or statement.']);
+});
+
+test('refresh moves an earlier-named hook file to the current name, and enable leaves only one', () => {
+  const e = env();
+  const hooks = path.dirname(S.paths(e).hook);
+  S.enable(e);
+  fs.renameSync(S.paths(e).hook, S.paths(e).legacyHook);
+  assert.ok(S.status(e).hook, 'the earlier-named file still counts');
+  assert.ok(S.refresh(e));
+  assert.deepStrictEqual(fs.readdirSync(hooks), ['ai-cost-coach.json']);
+  fs.writeFileSync(S.paths(e).legacyHook, '{}');
+  S.enable(e);
+  assert.deepStrictEqual(fs.readdirSync(hooks), ['ai-cost-coach.json']);
 });

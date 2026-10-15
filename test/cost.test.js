@@ -12,9 +12,9 @@ const hook = (input) => spawnSync(process.execPath, [BIN, 'hook'], { input: JSON
 
 test('matches the /cost skill as Copilot expands it, with or without the plugin prefix', () => {
   assert.ok(INVOKED.test('The user explicitly invoked the "/cost" skill. Follow its instructions now.'));
-  assert.ok(INVOKED.test('The user explicitly invoked the "/ai-cost-drilldown:cost" skill. Follow its instructions now.'));
+  assert.ok(INVOKED.test('The user explicitly invoked the "/ai-cost-coach:cost" skill. Follow its instructions now.'));
   assert.ok(!INVOKED.test('The user explicitly invoked the "/costly" skill.'));
-  assert.ok(RAW.test('/cost prompts') && RAW.test('/ai-cost-drilldown:cost') && RAW.test('  /cost'));
+  assert.ok(RAW.test('/cost prompts') && RAW.test('/ai-cost-coach:cost') && RAW.test('  /cost'));
   assert.ok(!RAW.test('/costly') && !RAW.test('what does /cost do?'));
 });
 
@@ -30,11 +30,11 @@ test('hook: any other prompt passes through with no output', () => {
 });
 
 test('hook: /cost help is answered and blocked, never sent to the model', () => {
-  const r = hook({ sessionId: 'x', prompt: 'The user explicitly invoked the "/ai-cost-drilldown:cost" skill. Go.\n\n<skill-context name="cost">\nARGUMENTS: help\n</skill-context>' });
+  const r = hook({ sessionId: 'x', prompt: 'The user explicitly invoked the "/ai-cost-coach:cost" skill. Go.\n\n<skill-context name="cost">\nARGUMENTS: help\n</skill-context>' });
   const out = JSON.parse(r.stdout);
   assert.strictEqual(out.decision, 'block');
   assert.match(out.reason, /\/cost prompt N calls/);
-  assert.match(out.reason, /Answered locally by ai-cost-drilldown: no model call, no AI credits\./);
+  assert.match(out.reason, /Answered locally by ai-cost-coach: no model call, no AI credits\./);
 });
 
 test('hook: a bad argument is still answered (blocked), with the help', () => {

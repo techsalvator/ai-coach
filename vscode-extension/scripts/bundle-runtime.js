@@ -1,7 +1,7 @@
 'use strict';
 // Copies what the extension runs and installs into ./runtime so the .vsix carries it:
 //   runtime/lib/                the report code (the extension reads sessions with it)
-//   runtime/bin/cost.js         the Copilot hook (cost tips); "AI Cost: Set Up Copilot Tracking" copies it to ~/.ai-cost-drilldown
+//   runtime/bin/cost.js         the Copilot hook (cost tips); "AI Cost: Set Up Copilot Tracking" copies it to ~/.ai-cost-coach
 //   runtime/extensions/ai-cost/ the Copilot CLI token logger, copied to ~/.copilot/extensions/
 // In the repository these are read from the parent folder directly, so this runs only when packaging.
 const fs = require('fs');

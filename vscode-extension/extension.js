@@ -12,7 +12,8 @@ const Held = require('./heldprompts');
 const CH = require('./charts');
 const { dayTotal, money, tokens, em } = require('./model');
 // Public-estimate figures, so always shown with the ~
-const sustain = (i) => `<h3>Sustainability</h3>${tiles([['CO₂e (est.)', i ? `~${em.format(i.g)}` : '—'], ['Electricity (est.)', i ? `~${em.formatWh(i.wh)}` : '—'], ['Water (est.)', i ? `~${em.formatMl(i.ml)}` : '—']])}`;
+const sustain = (i) => { const x = em.explain(i) || []; const tip = (k) => { const e = x.find((y) => y.key === k); return e ? e.text : null; };
+  return `<h3>Sustainability</h3>${tiles([['CO₂e (est.)', i ? `~${em.format(i.g)}` : '—', tip('co2e')], ['Electricity (est.)', i ? `~${em.formatWh(i.wh)}` : '—', tip('electricity')], ['Water (est.)', i ? `~${em.formatMl(i.ml)}` : '—', tip('water')]])}`; };
 const { loadAll, callContent, promptTools, toolContent, SOURCE_LABEL } = require('./sources');
 const Quota = require('./quota');
 const Guard = require('./modelguard');
@@ -176,7 +177,7 @@ async function enableTracking() {
     `• ${home(p.runtime)}: the scripts the hook runs`,
     '',
     'Nothing is sent anywhere. Copilot CLI loads extensions only in experimental mode: run /experimental on once.',
-    ...(st.plugin ? ['', 'The old ai-cost-drilldown Copilot CLI plugin is installed. It can be removed now: this extension replaces it.'] : []),
+    ...(st.plugin ? ['', 'The old ai-cost-coach Copilot CLI plugin is installed. It can be removed now: this extension replaces it.'] : []),
   ].join('\n');
   const buttons = st.plugin ? ['Set up and remove the old plugin', 'Set up'] : ['Set up'];
   const pick = await vscode.window.showInformationMessage('Set up Copilot cost tracking?', { modal: true, detail }, ...buttons);
@@ -185,7 +186,7 @@ async function enableTracking() {
   let extra = '';
   if (pick.startsWith('Set up and remove')) {
     const r = Setup.removePlugin();
-    extra = r.ok ? ' The old plugin was removed.' : ` The old plugin could not be removed (${r.output || 'copilot not found'}); run "copilot plugin uninstall ai-cost-drilldown".`;
+    extra = r.ok ? ' The old plugin was removed.' : ` The old plugin could not be removed (${r.output || 'copilot not found'}); run "copilot plugin uninstall ai-cost-coach".`;
   }
   coachChanged.fire();
   const health = Setup.check();
@@ -323,7 +324,7 @@ function toggleCoach(key, on) {
   coachChanged.fire();
 }
 
-const RANGES = [[0, 'By month'], [-1, 'By day'], [7, '7d'], [30, '30d'], [90, '90d']];
+const RANGES = [[0, 'Month'], [-1, 'Day'], [30, '30d']];
 const rangeButtons = () => `<span class="range">${RANGES.map(([d, l]) => `<button class="${d === overviewDays && !overviewMonth ? 'on' : ''}" data-drill='${JSON.stringify({ kind: 'range', value: d })}' title="${d > 0 ? `Last ${d} days` : d < 0 ? 'Every day that is loaded' : 'Every month that is loaded'}">${l}</button>`).join('')}</span>`;
 function monthTable(months, compact) {
   const present = Object.keys(CH.SOURCE_SLOT).filter((k) => months.some((m) => m.bySource[k]));
@@ -356,18 +357,20 @@ function overviewHtml(compact = false) {
   const topModels = [...models.entries()].sort((a, b) => b[1].usd - a[1].usd).slice(0, 8);
   const top = all.flatMap((ss) => ss.prompts.map((p) => ({ p, sid: ss.id }))).filter((x) => x.p.usd).sort((a, b) => b.p.usd - a.p.usd).slice(0, 8);
   const bySource = Object.keys(CH.SOURCE_SLOT).map((k) => ({ k, usd: all.filter((x) => x.source === k).reduce((a, x) => a + x.usd, 0), n: all.filter((x) => x.source === k).length })).filter((x) => x.n);
+  const thisMonth = CH.monthTotals(all).find((m) => m.month === CH.monthKey(Date.now()));
   const chart = compact ? { width: 320, height: 130, labels: 5 } : {};
   const chartTitle = overviewMonth ? `Cost per day, ${CH.monthName(overviewMonth, true)}` : overviewDays === 0 ? 'Cost by month' : overviewDays < 0 ? 'Cost per day, all loaded history' : `Cost per ${overviewDays > 60 ? 'week' : 'day'}, last ${overviewDays} days`;
   const crumb = overviewMonth ? `<nav class="crumbs"><a class="cr" data-drill='{"kind":"month","value":""}' tabindex="0" role="button">All months</a><i class="sep">›</i><span>${esc(CH.monthName(overviewMonth, true))}</span><button class="link" data-drill='${JSON.stringify({ kind: 'filterMonth', value: overviewMonth })}'>Filter sessions to this month</button></nav>` : '';
   const stamp = syncing ? 'Syncing…' : lastSynced ? `Synced ${lastSynced.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : 'Not synced yet';
   const syncBtn = `<button class="link" data-drill='{"kind":"sync"}' title="Read the session logs again">↻ Sync sessions</button>`;
   const body = (compact ? '' : `<h2>AI cost overview</h2>`) + crumb
-    + `<p class="note sync">${syncBtn} <span>${stamp}</span>${rangeButtons()}</p>`
+    + `<p class="note sync">${syncBtn} <span>${stamp}</span></p>`
     + `<p class="note">${all.length} sessions, ${prompts.length} prompts${F.isActive(filter) ? ` · filtered: ${esc(F.describe(filter))} <button class="link" data-drill='{"kind":"clear"}'>Clear</button>` : ''}.${compact ? '' : ' Costs are list-price estimates: Claude Code per token, Copilot in AI credits at $0.01. CO₂e, electricity and water are rough public-estimate figures from token counts (not GreenPixie or measured data), good for comparing, not reporting.'}</p>`
-    + tiles([['Total cost', money(usd)], overviewMonth ? ['Prompts', prompts.length] : ['Today', money(dayTotal(all))], ['Sessions', all.length], ['Cache hit', sp && sp.cacheHit != null ? `${Math.round(sp.cacheHit * 100)}%` : '—']])
+    + tiles([['Total cost', money(usd)], ...(overviewMonth ? [['Prompts', prompts.length]] : [['Today', money(dayTotal(all))], ['This month', money(thisMonth ? thisMonth.total : 0)]]), ['Sessions', all.length], ['Cache hit', sp && sp.cacheHit != null ? `${Math.round(sp.cacheHit * 100)}%` : '—']])
+    + (!overviewMonth && bySource.length > 1 ? `<h3>This month by harness</h3>${tiles(bySource.map((x) => [SOURCE_LABEL[x.k], money(thisMonth && thisMonth.bySource[x.k] || 0)]))}` : '')
     + sustain(em.totalImpact(all))
     + quotaHtml(Quota.read())
-    + `<h3>${chartTitle} <span class="note">· ${overviewMonth || overviewDays === 0 ? 'click a bar to open' : 'click a bar to filter'}</span></h3>${CH.dailyCost(all, SOURCE_LABEL, { days: overviewDays, month: overviewMonth, chart, chips: harnessChoice() })}${overviewMonth ? '' : coverageNote(loaded)}`
+    + `<div class="charthead"><h3>${chartTitle} <span class="note">· ${overviewMonth || overviewDays === 0 ? 'click a bar to open' : 'click a bar to filter'}</span></h3>${rangeButtons()}</div>${CH.dailyCost(all, SOURCE_LABEL, { days: overviewDays, month: overviewMonth, chart, chips: harnessChoice() })}${overviewMonth ? '' : coverageNote(loaded)}`
     + (!overviewMonth && overviewDays === 0 ? `<h3>Cost by month</h3>${monthTable(CH.monthTotals(all), compact)}` : '')
     + (sp && sp.known ? `<h3>Where the tokens went</h3>${CH.composition(CH.tokenSegments(sp))}` : '')
     + (bySource.length > 1 ? `<h3>By source</h3>${CH.hbars(bySource.map((x) => ({ label: SOURCE_LABEL[x.k], value: x.usd, text: `${money(x.usd)} · ${x.n} sessions`, drill: { kind: 'source', value: x.k } })))}` : '')
@@ -470,7 +473,9 @@ function showAdvice(i) {
 }
 
 let panel;
-const tiles = (items) => `<div class="tiles">${items.map(([k, v]) => `<div class="tile"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>`;
+/** Breaks a long line into short ones for the hover tip, which keeps line breaks. */
+const wrapTip = (t) => t.replace(/(.{1,70})(\s+|$)/g, '$1\n').trim();
+const tiles = (items) => `<div class="tiles">${items.map(([k, v, tip]) => `<div class="tile"${tip ? ` data-tip="${esc(wrapTip(tip))}"` : ''}><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>`;
 
 function crumbsHtml(n, { s, p, c, canBack }) {
   const d = (o) => ` data-drill="${esc(JSON.stringify(o))}" tabindex="0" role="button"`;

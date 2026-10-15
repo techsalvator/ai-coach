@@ -61,3 +61,15 @@ test('units scale readably', () => {
   assert.strictEqual(em.formatMl(1500), '1.50 L');
   assert.strictEqual(em.formatMl(null), '—');
 });
+
+test('explain shows the numbers behind each figure', () => {
+  const i = em.callImpact({ fresh: 1000, cacheRead: 10000, cacheWrite: 0, tokensOut: 500 }, 'claude-sonnet-5-5');
+  const [elec, co2, water] = em.explain(i);
+  assert.deepStrictEqual([elec.key, co2.key, water.key], ['electricity', 'co2e', 'water']);
+  assert.match(elec.text, /500 output \+ 1,000 fresh input/);
+  assert.match(elec.text, /10,000 cache read/);
+  assert.match(elec.text, /medium-model tokens/);
+  assert.match(co2.text, /445 g CO₂e per kWh/);
+  assert.match(water.text, /1\.8 L per kWh/);
+  assert.strictEqual(em.explain(null), null);
+});

@@ -1,9 +1,9 @@
 'use strict';
 // Sets up Copilot tracking from the extension: the three pieces that used to come from the Copilot CLI plugin.
 //
-//   hook      ~/.copilot/hooks/ai-cost-drilldown.json   runs the cost-tips hook in VS Code chat and Copilot CLI
+//   hook      ~/.copilot/hooks/ai-cost-coach.json   runs the cost-tips hook in VS Code chat and Copilot CLI
 //   logger    ~/.copilot/extensions/ai-cost/             records the tokens of every Copilot CLI model call
-//   runtime   ~/.ai-cost-drilldown/runtime/              the scripts the hook runs, copied to a path that survives extension updates
+//   runtime   ~/.ai-cost-coach/runtime/              the scripts the hook runs, copied to a path that survives extension updates
 //
 // Nothing here touches VS Code. The extension asks first, then calls enable(); every function takes `env` so the
 // tests work in a temporary home.
@@ -13,20 +13,26 @@ const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
 
-const HOOK_NAME = 'ai-cost-drilldown.json';
+const HOOK_NAME = 'ai-cost-coach.json';
+const LEGACY_HOOK_NAME = 'ai-cost-drilldown.json'; // the hook file's earlier name: still found, moved and removed
 const LOGGER_NAME = 'ai-cost';
-const PLUGIN_NAME = 'ai-cost-drilldown';
+const PLUGIN_NAMES = ['ai-cost-drilldown', 'ai-cost-coach']; // the old Copilot CLI plugin, by its earlier and its current name
 const SHIM = 'hook.cmd'; // Windows: the file the hook's command names, in the runtime folder
 const WIN = process.platform === 'win32';
 const slash = (f) => String(f).replace(/\\/g, '/');
 
 const copilotHome = (env = process.env) => env.COPILOT_HOME || path.join(os.homedir(), '.copilot');
-const dataHome = (env = process.env) => env.AI_COST_HOME || env.COPILOT_COST_HOME || path.join(os.homedir(), '.ai-cost-drilldown');
+/** ~/.ai-cost-coach, except that an existing ~/.ai-cost-drilldown (the folder's earlier name) keeps being used. */
+const defaultHome = (home = os.homedir()) => {
+  const earlier = path.join(home, '.ai-cost-drilldown');
+  return !fs.existsSync(path.join(home, '.ai-cost-coach')) && fs.existsSync(earlier) ? earlier : path.join(home, '.ai-cost-coach');
+};
+const dataHome = (env = process.env) => env.AI_COST_HOME || env.COPILOT_COST_HOME || defaultHome();
 
 function paths(env = process.env) {
   const c = copilotHome(env);
   const runtime = path.join(dataHome(env), 'runtime');
-  return { copilot: c, hook: path.join(c, 'hooks', HOOK_NAME), logger: path.join(c, 'extensions', LOGGER_NAME), runtime, stamp: path.join(runtime, 'VERSION') };
+  return { copilot: c, hook: path.join(c, 'hooks', HOOK_NAME), legacyHook: path.join(c, 'hooks', LEGACY_HOOK_NAME), logger: path.join(c, 'extensions', LOGGER_NAME), runtime, stamp: path.join(runtime, 'VERSION') };
 }
 
 /** Where the files to install come from: the folder the .vsix carries, else the repository this runs from. */
@@ -123,8 +129,17 @@ function hookContent(runtime, node = null, platform = process.platform) {
 function pluginInstalled(env = process.env) {
   const root = path.join(copilotHome(env), 'installed-plugins');
   try {
-    return fs.readdirSync(root).some((m) => fs.existsSync(path.join(root, m, PLUGIN_NAME)));
+    return fs.readdirSync(root).some((m) => PLUGIN_NAMES.some((n) => fs.existsSync(path.join(root, m, n))));
   } catch { return false; }
+}
+
+/** The name the old plugin is installed under (its earlier name unless only the current one is there). */
+function pluginName(env = process.env) {
+  const root = path.join(copilotHome(env), 'installed-plugins');
+  try {
+    for (const n of PLUGIN_NAMES) if (fs.readdirSync(root).some((m) => fs.existsSync(path.join(root, m, n)))) return n;
+  } catch { /* none */ }
+  return PLUGIN_NAMES[0];
 }
 
 /** What is in place. `enabled` is true when all three pieces are, and `outdated` when the runtime is from another version. */
@@ -135,7 +150,7 @@ function status(env = process.env) {
   let bareNode = false;
   let viaShim = false;
   try {
-    const cmd = slash(JSON.parse(fs.readFileSync(p.hook, 'utf8')).hooks.UserPromptSubmit[0].command);
+    const cmd = slash(JSON.parse(fs.readFileSync(exists(p.hook) ? p.hook : p.legacyHook, 'utf8')).hooks.UserPromptSubmit[0].command);
     viaShim = cmd.includes(`${slash(p.runtime)}/${SHIM}`);
     hookTarget = viaShim || cmd.includes(`${slash(p.runtime)}/bin/cost.js`) ? 'runtime' : 'other';
     bareNode = /^node\s/.test(cmd); // `node` alone is not found when VS Code starts the hook
@@ -179,6 +194,7 @@ function enable(env = process.env) {
   const node = findNode(env);
   writeShim(p, node);
   fs.writeFileSync(p.hook, `${JSON.stringify(hookContent(p.runtime, node), null, 2)}\n`);
+  fs.rmSync(p.legacyHook, { force: true }); // two hook files would answer every prompt twice
   return { runtime: p.runtime, logger: p.logger, hook: p.hook, node };
 }
 
@@ -187,6 +203,10 @@ function refresh(env = process.env) {
   const s = status(env);
   if (!s.enabled) return false;
   let changed = false;
+  if (fs.existsSync(s.paths.legacyHook)) { // the hook file's earlier name: keep one file, under the current name
+    if (!fs.existsSync(s.paths.hook)) fs.renameSync(s.paths.legacyHook, s.paths.hook); else fs.rmSync(s.paths.legacyHook, { force: true });
+    changed = true;
+  }
   if (s.outdated) { const src = source(); copyRuntime(src, s.paths); copyLogger(src, s.paths); writeShim(s.paths, findNode(env)); changed = true; }
   if (s.bareNode || s.needsShim) { // an earlier setup wrote `node`, or on Windows a command PowerShell cannot run: write it as it should be
     const node = findNode(env);
@@ -245,7 +265,7 @@ function checkWindows(command, tmp, run = spawnSync) {
 function disable(env = process.env) {
   const p = paths(env);
   const removed = [];
-  for (const f of [p.hook, p.logger, p.runtime]) {
+  for (const f of [p.hook, p.legacyHook, p.logger, p.runtime]) {
     if (fs.existsSync(f)) { fs.rmSync(f, { recursive: true, force: true }); removed.push(f); }
   }
   return removed;
@@ -253,8 +273,8 @@ function disable(env = process.env) {
 
 /** Uninstalls the old Copilot CLI plugin through Copilot itself. Returns {ok, output}. */
 function removePlugin(env = process.env, run = spawnSync) {
-  const r = run('copilot', ['plugin', 'uninstall', PLUGIN_NAME], { encoding: 'utf8', timeout: 60000, env });
+  const r = run('copilot', ['plugin', 'uninstall', pluginName(env)], { encoding: 'utf8', timeout: 60000, env });
   return { ok: !r.error && r.status === 0, output: `${r.stdout || ''}${r.stderr || ''}${r.error ? r.error.message : ''}`.trim() };
 }
 
-module.exports = { paths, status, enable, refresh, check, checkWindows, findNode, shimContent, SHIM, disable, removePlugin, pluginInstalled, hookContent, source, version };
+module.exports = { pluginName, paths, status, enable, refresh, check, checkWindows, findNode, shimContent, SHIM, disable, removePlugin, pluginInstalled, hookContent, source, version };

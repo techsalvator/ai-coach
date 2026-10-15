@@ -1,5 +1,5 @@
 {
-  "name": "ai-cost-drilldown",
+  "name": "ai-cost-coach",
   "version": "0.1.0",
   "private": true,
   "description": "Where AI spend goes, per session, prompt, model call and tool call: the report code behind the AI Cost drill-down VS Code extension (vscode-extension/).",
@@ -14,5 +14,5 @@
   "scripts": {
     "test": "node --test test/*.test.js"
   },
-  "repository": "github:flexera/ai-cost-drilldown"
+  "repository": "github:techsalvator/ai-coach"
 }

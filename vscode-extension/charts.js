@@ -20,7 +20,7 @@ body.vscode-dark,body.vscode-high-contrast{--s1:#3987e5;--s2:#d95926;--s3:#199e7
 .crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:8px;color:var(--vscode-descriptionForeground)}.crumbs .link{margin:0}.crumbs span+.link{margin-left:10px}.cr{color:var(--vscode-textLink-foreground)}.cr:hover{text-decoration:underline}.sep{font-style:normal;opacity:.6}
 .legend.chips{gap:6px 8px}.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--vscode-panel-border);border-radius:12px;padding:2px 10px;background:none;color:var(--vscode-foreground);cursor:pointer;font:inherit}.chip:not(.on){opacity:.45}.chip.on{border-color:var(--vscode-focusBorder)}.chip:hover{background:var(--vscode-list-hoverBackground)}
 .sync{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin:6px 0}.sync .link{margin:0}
-.range{display:inline-flex;margin-left:auto;border:1px solid var(--vscode-panel-border);border-radius:4px;overflow:hidden}.range button{background:none;border:0;border-right:1px solid var(--vscode-panel-border);color:var(--vscode-foreground);padding:2px 9px;cursor:pointer;font:inherit}.range button:last-child{border-right:0}.range button:hover{background:var(--vscode-list-hoverBackground)}.range button.on{background:var(--vscode-button-background);color:var(--vscode-button-foreground)}
+.charthead{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;flex-wrap:wrap}.charthead h3{margin-bottom:6px}.range{display:inline-flex;margin:20px 0 6px auto;border:1px solid var(--vscode-panel-border);border-radius:4px;overflow:hidden}.range button{background:none;border:0;border-right:1px solid var(--vscode-panel-border);color:var(--vscode-foreground);padding:2px 9px;cursor:pointer;font:inherit}.range button:last-child{border-right:0}.range button:hover{background:var(--vscode-list-hoverBackground)}.range button.on{background:var(--vscode-button-background);color:var(--vscode-button-foreground)}
 .link{margin-top:14px;background:none;border:0;color:var(--vscode-textLink-foreground);cursor:pointer;padding:0;font:inherit}.link:hover{text-decoration:underline}
 .stack{display:flex;gap:2px;height:14px;max-width:780px;margin:6px 0}.seg{min-width:2px;border-radius:2px}
 .legend{display:flex;flex-wrap:wrap;gap:4px 18px;margin:6px 0 4px;max-width:780px}.legend span{white-space:nowrap}
@@ -191,4 +191,4 @@ function monthTotals(sessions) {
   return [...by.values()].sort((a, b) => (a.month < b.month ? 1 : -1)).map((m) => ({ ...m, sessions: m.ids.size }));
 }
 
-module.exports = { monthTotals, monthName, CSS, TIP_SCRIPT, DRILL_SCRIPT, columns, composition, hbars, legend, tokenSegments, dailyCost, niceMax, SOURCE_SLOT };
+module.exports = { monthKey, monthTotals, monthName, CSS, TIP_SCRIPT, DRILL_SCRIPT, columns, composition, hbars, legend, tokenSegments, dailyCost, niceMax, SOURCE_SLOT };

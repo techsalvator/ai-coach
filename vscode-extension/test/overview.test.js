@@ -31,7 +31,7 @@ test('By day draws one bar group per day of the loaded history, and the others k
   assert.strictEqual(ext.days, -1);
   const html = page();
   assert.match(html, /Cost per day, all loaded history/);
-  assert.match(html, /class="on"[^>]*>By day</);
+  assert.match(html, /class="on"[^>]*>Day</);
   assert.ok(barDays(html) > 60, `every day, not weeks (${barDays(html)} days)`);
   assert.ok(!/Cost by month<\/h3>\s*<table/.test(html), 'no month table here');
   drill({ kind: 'range', value: 30 });
@@ -132,4 +132,45 @@ test('CO2e, electricity and water sit under a Sustainability header', () => {
   const section = html.slice(at, html.indexOf('</div></div>', at) + 12);
   for (const k of ['CO₂e (est.)', 'Electricity (est.)', 'Water (est.)']) assert.ok(section.includes(k), k);
   assert.ok(!html.slice(0, at).includes('Water (est.)'), 'not in the main tile row');
+});
+
+test('each Sustainability tile explains its calculation on hover', () => {
+  ext.load(sessions, { days: 0 });
+  const html = page();
+  const at = html.indexOf('<h3>Sustainability</h3>');
+  const section = html.slice(at, html.indexOf('</div></div>', at) + 12);
+  assert.ok(!section.includes('class="info"'), 'no always-visible bars');
+  const tips = [...section.matchAll(/class="tile" data-tip="([^"]*)"/g)].map((m) => m[1]);
+  assert.strictEqual(tips.length, 3);
+  assert.match(tips[0], /g CO₂e per kWh/);
+  assert.match(tips[1], /From [\d,]+ model calls?/);
+  assert.match(tips[2], /L per kWh/);
+});
+
+test('the overview tiles include this month, with this month\'s cost for each harness', () => {
+  ext.load(sessions, { days: 0 });
+  const html = page();
+  const tile = (label) => (new RegExp(`<span>${label}</span><b>([^<]*)</b>`).exec(html) || [])[1];
+  for (const k of ['Total cost', 'Today', 'This month', 'Sessions', 'Cache hit']) assert.ok(tile(k) != null, k);
+  assert.ok(html.includes('<h3>This month by harness</h3>'));
+  const at = html.indexOf('<h3>This month by harness</h3>');
+  const section = html.slice(at, html.indexOf('</div></div>', at) + 12);
+  const names = [...section.matchAll(/<span>([^<]*)<\/span><b>\$/g)].map((m) => m[1]);
+  assert.ok(names.length >= 2, `a tile per harness (${names})`);
+  const cost = (v) => Number(String(v).replace('$', ''));
+  const sum = [...section.matchAll(/<span>[^<]*<\/span><b>(\$[\d.]+)<\/b>/g)].reduce((a, m) => a + cost(m[1]), 0);
+  assert.ok(Math.abs(sum - cost(tile('This month'))) < 0.01, 'the harnesses add up to this month');
+  drill({ kind: 'month', value: '2026-09' });
+  assert.ok(!page().includes('This month by harness'), 'not inside a single month');
+  drill({ kind: 'month', value: '' });
+});
+
+test('the range buttons sit in the chart heading, and offer Month, Day and 30d', () => {
+  ext.load(sessions, { days: 0 });
+  const html = page();
+  const head = /<div class="charthead">(.*?)<\/div>/s.exec(html);
+  assert.ok(head, 'a chart heading row');
+  assert.deepStrictEqual([...head[1].matchAll(/<button[^>]*>([^<]*)<\/button>/g)].map((m) => m[1]), ['Month', 'Day', '30d']);
+  assert.match(head[1], /Cost by month/);
+  assert.ok(!/class="note sync"[^>]*>.*class="range"/s.test(html.split('</p>')[0]), 'not in the top line');
 });

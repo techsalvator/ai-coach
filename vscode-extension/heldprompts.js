@@ -28,7 +28,7 @@ const remove = (rec) => { try { fs.unlinkSync(rec.file); } catch { /* shown by a
 /** The notification's line: why it was held, without markdown. */
 function message(rec) {
   const first = String(rec.banner || '').split('\n')[0]
-    .replace(/\*\*Prompt check \(ai-cost-drilldown\): not sent\.\*\*\s*/, '').replace(/\*\*/g, '').replace(/`/g, '');
+    .replace(/\*\*Prompt check \(ai-cost-(?:coach|drilldown)\): not sent\.\*\*\s*/, '').replace(/\*\*/g, '').replace(/`/g, '');
   const text = `Prompt held: ${first}`;
   return text.length > 240 ? `${text.slice(0, 239)}…` : text;
 }

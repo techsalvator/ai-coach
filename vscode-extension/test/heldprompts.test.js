@@ -10,7 +10,7 @@ const coach = require(path.join(libDir, 'coach.js'));
 
 const env = () => ({ ...process.env, AI_COST_HOME: fs.mkdtempSync(path.join(os.tmpdir(), 'aicost-held-')) });
 const NOW = Date.parse('2026-10-06T12:00:00Z');
-const BANNER = '**Prompt check (ai-cost-drilldown): not sent.** This prompt was held back because a bare retry makes the model guess what failed.\n\n**Tip:** Name the file, paste the exact error line.\n\nTry it as:\n> In `<file or function>`, `<what is wrong>`.\n\n- Run /compact first.\n- Or send the same prompt again.\n\n_No model call, no AI credits._';
+const BANNER = '**Prompt check (ai-cost-coach): not sent.** This prompt was held back because a bare retry makes the model guess what failed.\n\n**Tip:** Name the file, paste the exact error line.\n\nTry it as:\n> In `<file or function>`, `<what is wrong>`.\n\n- Run /compact first.\n- Or send the same prompt again.\n\n_No model call, no AI credits._';
 
 test('pending lists fresh held prompts oldest first, and drops stale or unreadable ones', () => {
   const e = env();
@@ -28,13 +28,13 @@ test('pending lists fresh held prompts oldest first, and drops stale or unreadab
 
 test('the notification says why the prompt was held, in plain text', () => {
   assert.strictEqual(H.message({ banner: BANNER }), 'Prompt held: This prompt was held back because a bare retry makes the model guess what failed.');
-  const long = H.message({ banner: `**Prompt check (ai-cost-drilldown): not sent.** ${'word '.repeat(80)}` });
+  const long = H.message({ banner: `**Prompt check (ai-cost-coach): not sent.** ${'word '.repeat(80)}` });
   assert.ok(long.length <= 240 && long.endsWith('…'));
 });
 
 test('the banner as HTML: structure kept, everything escaped', () => {
   const html = H.bannerHtml({ banner: BANNER });
-  assert.match(html, /<p><b>Prompt check \(ai-cost-drilldown\): not sent\.<\/b> This prompt was held back/);
+  assert.match(html, /<p><b>Prompt check \(ai-cost-coach\): not sent\.<\/b> This prompt was held back/);
   assert.match(html, /<p><b>Tip:<\/b> Name the file/);
   assert.match(html, /<blockquote>In <code>&lt;file or function&gt;<\/code>, <code>&lt;what is wrong&gt;<\/code>\.<\/blockquote>/);
   assert.match(html, /<ul><li>Run \/compact first\.<\/li><li>Or send the same prompt again\.<\/li><\/ul>/);

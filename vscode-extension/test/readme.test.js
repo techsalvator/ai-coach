@@ -12,7 +12,7 @@ test('the extension README drops the clone-and-build sections and their lines in
   const readme = build(root);
   assert.ok(!/^## Install/m.test(readme) && !/^## Develop/m.test(readme));
   assert.ok(!/\(#install\)|\(#develop\)/.test(readme));
-  assert.ok(!/dist\/ai-cost-drilldown|npm run package|code --install-extension/.test(readme), 'no instructions for building or installing the file');
+  assert.ok(!/dist\/ai-cost-coach|npm run package|code --install-extension/.test(readme), 'no instructions for building or installing the file');
   for (const heading of ['The screens', 'Advice', 'Copilot tracking and cost tips', 'Reading the numbers', 'Settings and commands', 'Your data and privacy', 'What it cannot do']) {
     assert.match(readme, new RegExp(`^## ${heading}`, 'm'), heading);
   }

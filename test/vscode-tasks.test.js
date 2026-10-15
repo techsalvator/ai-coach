@@ -50,8 +50,8 @@ test('leaves a file it cannot parse untouched', () => {
 test('every input a task uses is defined, and a Windows root gets forward slashes', () => {
   const ids = new Set(INPUTS.map((i) => i.id));
   for (const t of tasksFor(ROOT)) for (const m of t.command.matchAll(/\$\{input:(\w+)\}/g)) assert.ok(ids.has(m[1]), m[1]);
-  assert.ok(tasksFor('C:\\Users\\me\\ai-cost-drilldown')[0].command.startsWith('node "C:/Users/me/ai-cost-drilldown/bin/cost.js"'));
-  assert.ok(isTransient('/Users/me/.npm/_npx/abc/node_modules/ai-cost-drilldown') && !isTransient(ROOT));
+  assert.ok(tasksFor('C:\\Users\\me\\ai-cost-coach')[0].command.startsWith('node "C:/Users/me/ai-cost-coach/bin/cost.js"'));
+  assert.ok(isTransient('/Users/me/.npm/_npx/abc/node_modules/ai-cost-coach') && !isTransient(ROOT));
 });
 
 test('the command line: --file, a root without the scripts, the npx cache, and --uninstall', () => {
@@ -78,7 +78,7 @@ test('the installer adds the tasks with --vscode-tasks and removes them on --uni
 
 test('the installer points the tasks at the installed plugin when there is one', async () => {
   const dir = tmp();
-  const plugin = path.join(dir, 'installed-plugins', '_direct', 'ai-cost-drilldown');
+  const plugin = path.join(dir, 'installed-plugins', '_direct', 'ai-cost-coach');
   fs.mkdirSync(path.join(plugin, 'bin'), { recursive: true });
   fs.writeFileSync(path.join(plugin, 'bin', 'cost.js'), '');
   const file = path.join(dir, 'tasks.json');

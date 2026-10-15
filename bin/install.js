@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 'use strict';
-// One-command setup for ai-cost-drilldown: the Copilot CLI plugin, which also carries the token logger.
+// One-command setup for ai-cost-coach: the Copilot CLI plugin, which also carries the token logger.
 //
-//   npx github:flexera/ai-cost-drilldown            install the plugin (asks first)
+//   npx github:techsalvator/ai-coach            install the plugin (asks first)
 //   node bin/install.js                             the same, from a clone
 //   ... --yes                                       do not ask
 //   ... --dry-run                                   show what would run, change nothing
@@ -30,7 +30,8 @@ const ext = require('./install-extension');
 const vscode = require('./vscode-tasks');
 const vscodeHook = require('./vscode-hook');
 
-const PLUGIN = 'ai-cost-drilldown';
+const PLUGIN = 'ai-cost-coach';
+const LEGACY_PLUGIN = 'ai-cost-drilldown'; // the plugin's earlier name: still found and removed
 const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
 const DEFAULT_SOURCE = String(pkg.repository || '').replace(/^github:/, '').replace(/^https:\/\/github\.com\//, '').replace(/\.git$/, '');
 
@@ -64,7 +65,7 @@ function parse(argv) {
 
 const HELP = [
   'usage: install.js [--yes] [--dry-run] [--uninstall] [--from-here | --source <owner/repo|path>] [--no-vscode-tasks] [--no-vscode-hook] [--user-extension [--no-plugin]] [--dir <extensions folder>]',
-  'Installs the ai-cost-drilldown Copilot CLI plugin, which includes the token logger (asks first).',
+  'Installs the ai-cost-coach Copilot CLI plugin, which includes the token logger (asks first).',
 ].join('\n');
 
 /** Runs a command; {status, stdout, stderr, missing}. */
@@ -99,17 +100,20 @@ async function run(argv, deps = {}) {
   const extRoot = o.dir || path.join(env.COPILOT_HOME || path.join(os.homedir(), '.copilot'), 'extensions');
   const userCopy = path.join(extRoot, 'ai-cost');
   const hasUserCopy = ['ai-cost', 'ai-cost-token-logger'].some((n) => fs.existsSync(path.join(extRoot, n)));
+  const copilotHome = env.COPILOT_HOME || path.join(os.homedir(), '.copilot');
+  const direct = (n) => path.join(copilotHome, 'installed-plugins', '_direct', n);
+  // The folder the plugin is installed in, under whichever of its names it has.
+  const installedName = !fs.existsSync(direct(PLUGIN)) && fs.existsSync(direct(LEGACY_PLUGIN)) ? LEGACY_PLUGIN : PLUGIN;
   const verb = o.uninstall ? 'Remove' : 'Install';
   const plan = [];
-  if (o.plugin) plan.push(o.uninstall ? `copilot plugin uninstall ${PLUGIN}` : `copilot plugin install ${o.source}   (the plugin includes the token logger)`);
+  if (o.plugin) plan.push(o.uninstall ? `copilot plugin uninstall ${installedName}` : `copilot plugin install ${o.source}   (the plugin includes the token logger)`);
   if (o.extension && !o.uninstall) {
     plan.push(`copy the token logger to ${userCopy}/`);
     if (o.plugin) plan.push('  (the plugin already includes it, so every call would be recorded twice; the reports count each once)');
   }
   if (o.uninstall && (o.extension || hasUserCopy)) plan.push(`remove the separate token-logger copy at ${userCopy}/`);
   // VS Code tasks: they must point at a folder that stays, so the installed plugin, else this checkout.
-  const copilotHome = env.COPILOT_HOME || path.join(os.homedir(), '.copilot');
-  const installedPlugin = path.join(copilotHome, 'installed-plugins', '_direct', PLUGIN);
+  const installedPlugin = direct(installedName);
   const tasksFile = o.tasksFile || vscode.userTasksFile(deps.home || os.homedir(), process.platform, env);
   // Both VS Code parts are added whenever VS Code is found (its user folder exists); --no-vscode-* leaves one out.
   const hasVscode = Boolean(vscode.userTasksFile(deps.home || os.homedir(), process.platform, env));
@@ -123,7 +127,7 @@ async function run(argv, deps = {}) {
   const hookPath = vscodeHook.hookFile(home);
   const doHook = o.hook || (o.uninstall && fs.existsSync(hookPath));
   if (doHook) plan.push(o.uninstall ? `remove the VS Code chat hook ${hookPath}` : `add the VS Code chat hook ${hookPath} (/cost and cost tips in VS Code's chat)`);
-  log([`${verb} ai-cost-drilldown. This will:`, ...plan.map((p) => `  - ${p}`)].join('\n'));
+  log([`${verb} ai-cost-coach. This will:`, ...plan.map((p) => `  - ${p}`)].join('\n'));
   if (o.dryRun) { log('\nDry run: nothing was changed.'); return 0; }
 
   if (!o.yes) {
@@ -138,7 +142,7 @@ async function run(argv, deps = {}) {
    * fetched by npx sits in a cache npm clears, so it is first copied to <AI_COST_HOME>/app, which stays.
    */
   const here = deps.here || path.resolve(__dirname, '..');
-  const appDir = path.join(env.AI_COST_HOME || path.join(home, '.ai-cost-drilldown'), 'app');
+  const appDir = path.join(env.AI_COST_HOME || require('../lib/paths').defaultHome(home), 'app');
   let stableRoot = null;
   const scriptsRoot = () => {
     if (stableRoot) return stableRoot;
@@ -155,7 +159,7 @@ async function run(argv, deps = {}) {
   };
   if (o.plugin) {
     if (o.uninstall) {
-      const r = exec('copilot', ['plugin', 'uninstall', PLUGIN]);
+      const r = exec('copilot', ['plugin', 'uninstall', installedName]);
       if (r.missing) log('Plugin: Copilot CLI is not installed here, so there is no plugin to remove.');
       else if (r.status !== 0) { log(`Plugin: uninstall failed (maybe it was not installed):\n  ${tail(r)}`); failed = true; }
       else log('Plugin: removed.');

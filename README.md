@@ -12,10 +12,10 @@ the images comes from anyone's real logs.*
 ## Install
 
 You need **VS Code 1.90 or newer** (Node.js 18+ only for [Copilot tracking](#copilot-tracking-and-cost-tips)). Download
-the `.vsix` from the [releases](https://github.com/flexera/ai-cost-drilldown/releases) and install it:
+the `.vsix` from the [releases](https://github.com/techsalvator/ai-coach/releases) and install it:
 
 ```bash
-gh release download --repo flexera/ai-cost-drilldown --pattern '*.vsix'
+gh release download --repo techsalvator/ai-coach --pattern '*.vsix'
 code --install-extension ai-cost-coach-*.vsix
 ```
 
@@ -29,8 +29,9 @@ remove it; the `/cost` command inside Copilot is gone, the reports are in VS Cod
 Run **AI Cost: Show Tour** (or Help → Get Started → AI Cost Coach) for a walkthrough. The extension's page in the
 Extensions view shows this text without the images, because VS Code only loads images there from public `https` addresses.
 
-- **Overview.** Opens in an editor tab: tiles, **cost by month** stacked by tool, tokens, and cost by source, model and
-  prompt. **By month · By day · 7d · 30d · 90d** changes the range. **The legend is the tool selector:** click a tool to
+- **Overview.** Opens in an editor tab: tiles (total, today, this month, sessions, cache hit), this month's cost for each
+  tool, **Sustainability** tiles (below), **cost by month** stacked by tool, tokens, and cost by source, model and
+  prompt. **Month · Day · 30d**, beside the chart heading, changes the range. **The legend is the tool selector:** click a tool to
   leave it out (the same filter as **Filter → Source**, so the tree, Advice and status bar follow). Almost everything is
   clickable: a bar filters or opens that month, day, model or prompt.
 
@@ -97,8 +98,8 @@ did not see show "No token data") and **the coach**, a prompt hook that checks e
 and VS Code chat.
 
 Turn it on with **Copilot tracking** in the Coach panel, or **AI Cost: Set Up Copilot Tracking**. It asks first and lists
-what it writes: the hook (`~/.copilot/hooks/ai-cost-drilldown.json`), the token logger (`~/.copilot/extensions/ai-cost/`)
-and the hook's scripts (`~/.ai-cost-drilldown/runtime/`). Copilot CLI loads extensions only in experimental mode: run
+what it writes: the hook (`~/.copilot/hooks/ai-cost-coach.json`), the token logger (`~/.copilot/extensions/ai-cost/`)
+and the hook's scripts (`~/.ai-cost-coach/runtime/`). Copilot CLI loads extensions only in experimental mode: run
 `/experimental on` once, then start a new session. **Remove Copilot Tracking** deletes the three.
 
 **The switches** (Coach panel; set by environment variables such as `AI_COST_COACH_STRICT` when those are present):
@@ -136,7 +137,7 @@ with five or more telling gaps) and checks its cold-cache warnings against the n
 **If the hook does not run.** VS Code starts hooks with a thin `PATH`, so a bare `node` fails and prompts run unchecked.
 Setup writes the absolute path to node, and **AI Cost: Check Copilot Tracking** runs the hook the way VS Code does and
 tells you whether it works (it also runs after setup and at startup). A failure inside the hook is written to
-`~/.ai-cost-drilldown/hook-errors.jsonl`. On Windows the hook file names a small `hook.cmd` that runs from cmd.exe,
+`~/.ai-cost-coach/hook-errors.jsonl`. On Windows the hook file names a small `hook.cmd` that runs from cmd.exe,
 PowerShell and Git Bash alike.
 
 ## Reading the numbers
@@ -147,11 +148,23 @@ usage is not billed per token: these are list-price figures for comparing where 
 the whole conversation, normally from a cheap cache; a prompt that starts with a miss pays full price for all of it.
 **Sources:** `~/.claude/projects/`, `~/.copilot/session-state/` and VS Code's chat storage.
 
+**Sustainability is a rough estimate, not a measurement.** The **Sustainability** tiles (overview, session, prompt and
+model call) show estimated **CO₂e**, **electricity** and **water** for the tokens in your logs; every figure carries a
+`~`, and **hovering a tile shows the sum with your actual numbers**. Electricity comes first: output tokens, plus fresh
+input at 0.1, cache writes at 0.1 and cache reads at 0.01 of an output token, times an energy figure for the model's size
+(0.0003 Wh per output token for small models such as Haiku, 0.0007 for medium such as Sonnet and GPT, 0.0015 for large such
+as Opus; models it does not recognise count as medium), times a data-centre overhead (PUE) of 1.2. **CO₂e** is that
+electricity at 445 g per kWh, the global average grid. **Water** is that electricity at 1.8 L per kWh of cooling. These are
+public-estimate assumptions (Mistral's lifecycle assessment, Google and OpenAI's per-prompt disclosures, Ember/IEA grid
+data, a Berkeley Lab data-centre report), good to an order of magnitude at best, and they are **not GreenPixie data and
+not vendor-measured**: use them to compare prompts and models, not to report a footprint. The factors and their sources
+are in `lib/emissions-factors.json`; replace that file to use your own.
+
 ## Settings and commands
 
 Where to change things: the settings below are in **VS Code Settings** (search `AI Cost`, or `aiCost.` in
 `settings.json`). The coach's **switches and limits** (strict mode, the daily budget and the rest) are in the **Coach
-panel** in the sidebar, and are saved in `~/.ai-cost-drilldown/config.json`. Commands are in the Command Palette under
+panel** in the sidebar, and are saved in `~/.ai-cost-coach/config.json`. Commands are in the Command Palette under
 **AI Cost: …**.
 
 | Setting | Default | What it does |
@@ -163,7 +176,7 @@ panel** in the sidebar, and are saved in `~/.ai-cost-drilldown/config.json`. Com
 | `aiCost.refreshSeconds` | 60 | How often to read the logs again |
 | `aiCost.notifyHeldPrompts` | on | Show held prompts in VS Code chat as notifications |
 
-From a terminal, the same switches are `node ~/.ai-cost-drilldown/runtime/bin/cost.js coach [on|off|strict on|off|budget <n>|auto]`
+From a terminal, the same switches are `node ~/.ai-cost-coach/runtime/bin/cost.js coach [on|off|strict on|off|budget <n>|auto]`
 (it writes the same `config.json`, so the Coach panel shows the change). Only the extension's own commands are on the
 Command Palette: there is no `cost` command on your `PATH`.
 
@@ -172,7 +185,7 @@ Command Palette: there is no `cost` command on your `PATH`.
 The extension reads session logs that already exist on your machine, which include your prompt text, folders and branch
 names. It sends nothing anywhere and needs no account or key. The one exception is **Strict model**, which sends the held
 prompt, the session's last few prompts and answer, its last failed tool result and the branch name to a small model
-through your own `copilot` command. It writes nothing to those logs. Its own files are in `~/.ai-cost-drilldown/`
+through your own `copilot` command. It writes nothing to those logs. Its own files are in `~/.ai-cost-coach/`
 (`AI_COST_HOME` changes it); [Copilot tracking](#copilot-tracking-and-cost-tips) is the only thing that writes outside it,
 and only after you agree.
 

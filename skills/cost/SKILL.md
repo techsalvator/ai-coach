@@ -3,7 +3,7 @@ name: cost
 description: Show AI credits, dollars, tokens and tool calls per prompt and per session for GitHub Copilot CLI (/cost help for options).
 ---
 
-Normally the ai-cost-drilldown hook answers /cost before this text reaches you. If you are
+Normally the ai-cost-coach hook answers /cost before this text reaches you. If you are
 reading it, the hook did not run, so produce the report yourself:
 
 1. Run this command with the shell tool, replacing ARGS with the text after "ARGUMENTS:"
