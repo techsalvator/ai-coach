@@ -12,7 +12,7 @@ const Held = require('./heldprompts');
 const CH = require('./charts');
 const { dayTotal, money, tokens, em } = require('./model');
 // Public-estimate figures, so always shown with the ~
-const sustain = (i) => `<h3>Sustainability</h3>${tiles([['CO₂e (est.)', i ? `~${em.format(i.g)}` : '—'], ['Electricity (est.)', i ? `~${em.formatWh(i.wh)}` : '—'], ['Water (est.)', i ? `~${em.formatMl(i.ml)}` : '—']])}`;
+const sustain = (i) => `<h3>Sustainability</h3>${tiles([['CO₂e (est.)', i ? `~${em.format(i.g)}` : '—'], ['Electricity (est.)', i ? `~${em.formatWh(i.wh)}` : '—'], ['Water (est.)', i ? `~${em.formatMl(i.ml)}` : '—']])}${(em.explain(i) || []).map((e) => `<div class="info"><b>${esc(e.label)}</b> ${esc(e.text)}</div>`).join('')}`;
 const { loadAll, callContent, promptTools, toolContent, SOURCE_LABEL } = require('./sources');
 const Quota = require('./quota');
 const Guard = require('./modelguard');

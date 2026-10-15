@@ -12,6 +12,7 @@ const CSS = `
 body.vscode-dark,body.vscode-high-contrast{--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500}
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:12px 0}
 .tile{padding:10px 12px;border:1px solid var(--vscode-panel-border);border-radius:6px}
+.info{margin:6px 0;padding:6px 10px;border-left:3px solid var(--vscode-textLink-foreground,#3794ff);background:var(--vscode-textBlockQuote-background,transparent);color:var(--ink2);font-size:12px}.info b{color:var(--vscode-foreground);font-weight:600}
 .tile b{display:block;font-size:20px;font-weight:500;margin-top:2px}.tile span{color:var(--ink2)}
 .chart{margin:6px 0 4px;max-width:780px}.chart svg{width:100%;height:auto;display:block;overflow:visible}
 .chart text{fill:var(--ink2);font-size:11px}.chart .ax{stroke:var(--grid)}.chart .bl{stroke:var(--ink2);stroke-width:1}

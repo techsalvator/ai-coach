@@ -133,3 +133,14 @@ test('CO2e, electricity and water sit under a Sustainability header', () => {
   for (const k of ['CO₂e (est.)', 'Electricity (est.)', 'Water (est.)']) assert.ok(section.includes(k), k);
   assert.ok(!html.slice(0, at).includes('Water (est.)'), 'not in the main tile row');
 });
+
+test('each Sustainability figure has an info bar with the calculation', () => {
+  ext.load(sessions, { days: 0 });
+  const html = page();
+  const at = html.indexOf('<h3>Sustainability</h3>');
+  const section = html.slice(at, at + 4000);
+  assert.strictEqual((section.match(/class="info"/g) || []).length, 3);
+  assert.match(section, /<b>Electricity<\/b> From [\d,]+ model call/);
+  assert.match(section, /g CO₂e per kWh/);
+  assert.match(section, /L per kWh/);
+});
