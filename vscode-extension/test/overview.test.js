@@ -134,13 +134,15 @@ test('CO2e, electricity and water sit under a Sustainability header', () => {
   assert.ok(!html.slice(0, at).includes('Water (est.)'), 'not in the main tile row');
 });
 
-test('each Sustainability figure has an info bar with the calculation', () => {
+test('each Sustainability tile explains its calculation on hover', () => {
   ext.load(sessions, { days: 0 });
   const html = page();
   const at = html.indexOf('<h3>Sustainability</h3>');
-  const section = html.slice(at, at + 4000);
-  assert.strictEqual((section.match(/class="info"/g) || []).length, 3);
-  assert.match(section, /<b>Electricity<\/b> From [\d,]+ model call/);
-  assert.match(section, /g CO₂e per kWh/);
-  assert.match(section, /L per kWh/);
+  const section = html.slice(at, html.indexOf('</div></div>', at) + 12);
+  assert.ok(!section.includes('class="info"'), 'no always-visible bars');
+  const tips = [...section.matchAll(/class="tile" data-tip="([^"]*)"/g)].map((m) => m[1]);
+  assert.strictEqual(tips.length, 3);
+  assert.match(tips[0], /g CO₂e per kWh/);
+  assert.match(tips[1], /From [\d,]+ model calls?/);
+  assert.match(tips[2], /L per kWh/);
 });

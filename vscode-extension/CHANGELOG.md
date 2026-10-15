@@ -6,8 +6,8 @@ All notable changes to the AI Cost Coach extension (called AI Cost Drilldown up 
 
 ### Added
 
-- **Each Sustainability figure now says how it was worked out.** Under the CO₂e, electricity and water tiles (overview,
-  session, prompt and model-call screens) a bar shows the sum with the actual numbers: the output, fresh input, cache
+- **Each Sustainability figure now says how it was worked out.** Hover the CO₂e, electricity or water tile (overview,
+  session, prompt and model-call screens) to see the sum with the actual numbers: the output, fresh input, cache
   read and cache write tokens behind it, the energy factor for the model size, the data-centre overhead (PUE), then the
   grid (g CO₂e per kWh) and water (L per kWh) factors, down to the figure on the tile.
 

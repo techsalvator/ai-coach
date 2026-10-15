@@ -12,7 +12,8 @@ const Held = require('./heldprompts');
 const CH = require('./charts');
 const { dayTotal, money, tokens, em } = require('./model');
 // Public-estimate figures, so always shown with the ~
-const sustain = (i) => `<h3>Sustainability</h3>${tiles([['CO₂e (est.)', i ? `~${em.format(i.g)}` : '—'], ['Electricity (est.)', i ? `~${em.formatWh(i.wh)}` : '—'], ['Water (est.)', i ? `~${em.formatMl(i.ml)}` : '—']])}${(em.explain(i) || []).map((e) => `<div class="info"><b>${esc(e.label)}</b> ${esc(e.text)}</div>`).join('')}`;
+const sustain = (i) => { const x = em.explain(i) || []; const tip = (k) => { const e = x.find((y) => y.key === k); return e ? e.text : null; };
+  return `<h3>Sustainability</h3>${tiles([['CO₂e (est.)', i ? `~${em.format(i.g)}` : '—', tip('co2e')], ['Electricity (est.)', i ? `~${em.formatWh(i.wh)}` : '—', tip('electricity')], ['Water (est.)', i ? `~${em.formatMl(i.ml)}` : '—', tip('water')]])}`; };
 const { loadAll, callContent, promptTools, toolContent, SOURCE_LABEL } = require('./sources');
 const Quota = require('./quota');
 const Guard = require('./modelguard');
@@ -470,7 +471,9 @@ function showAdvice(i) {
 }
 
 let panel;
-const tiles = (items) => `<div class="tiles">${items.map(([k, v]) => `<div class="tile"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>`;
+/** Breaks a long line into short ones for the hover tip, which keeps line breaks. */
+const wrapTip = (t) => t.replace(/(.{1,70})(\s+|$)/g, '$1\n').trim();
+const tiles = (items) => `<div class="tiles">${items.map(([k, v, tip]) => `<div class="tile"${tip ? ` data-tip="${esc(wrapTip(tip))}"` : ''}><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>`;
 
 function crumbsHtml(n, { s, p, c, canBack }) {
   const d = (o) => ` data-drill="${esc(JSON.stringify(o))}" tabindex="0" role="button"`;
