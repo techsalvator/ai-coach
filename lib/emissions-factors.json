@@ -1,0 +1,19 @@
+{
+  "label": "Public-estimate factors. NOT GreenPixie data.",
+  "note": "GreenPixie does not publish per-model or per-token factors, so these are order-of-magnitude assumptions for a coaching signal, not an inventory figure. Swap in vendor-measured factors by replacing this file; the shape stays the same.",
+  "unit": "energy in Wh per output token; input tokens are a fraction of that",
+  "classes": {
+    "small":  { "whPerOutputToken": 0.0003, "examples": "haiku, mini, flash, nano" },
+    "medium": { "whPerOutputToken": 0.0007, "examples": "sonnet, gpt-5.x, default for unknown models" },
+    "large":  { "whPerOutputToken": 0.0015, "examples": "opus" }
+  },
+  "inputRelativeToOutput": { "fresh": 0.1, "cacheRead": 0.01, "cacheWrite": 0.1 },
+  "pue": 1.2,
+  "gridGramsPerKWh": 445,
+  "sources": [
+    "Mistral Large 2 lifecycle assessment with ADEME and Carbone 4: about 1.14 gCO2e per 400-token reply (includes training and hardware share)",
+    "Google, Aug 2025: median Gemini text prompt about 0.24 Wh",
+    "OpenAI, 2025: typical ChatGPT query about 0.34 Wh",
+    "Ember / IEA: global average grid about 445 gCO2/kWh"
+  ]
+}

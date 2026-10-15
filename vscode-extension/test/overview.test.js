@@ -111,3 +111,11 @@ test('the status bar follows the tool selection: today\'s cost and the Copilot q
   drill({ kind: 'clear' });
   assert.strictEqual(today(bar.text), total, 'clearing the filter brings the total back');
 });
+
+test('the overview shows an estimated CO2e tile, labelled as an estimate', () => {
+  ext.load(sessions, { days: 0 });
+  const html = page();
+  assert.match(html, /CO₂e \(est\.\)/);
+  assert.match(html, /~[\d.]+ (g|kg) CO₂e/);
+  assert.match(html, /not GreenPixie/);
+});
