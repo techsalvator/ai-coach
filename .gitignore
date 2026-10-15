@@ -1,0 +1,4 @@
+# Made by `npm run package` in vscode-extension/
+dist/
+vscode-extension/runtime/
+vscode-extension/README.md
