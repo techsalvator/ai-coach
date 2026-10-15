@@ -25,7 +25,7 @@ Module._load = function (request, ...rest) {
   return load.call(this, request, ...rest);
 };
 const { _test } = require('../extension');
-const REC = { ts: Date.now(), session: 's', id: 'repeat', prompt: 'summarise <b>lib/coach.js</b>', banner: '**Prompt check (ai-cost-drilldown): not sent.** You already ran this exact prompt 5 minutes ago.\n\n- Send the same prompt again.' };
+const REC = { ts: Date.now(), session: 's', id: 'repeat', prompt: 'summarise <b>lib/coach.js</b>', banner: '**Prompt check (ai-cost-coach): not sent.** You already ran this exact prompt 5 minutes ago.\n\n- Send the same prompt again.' };
 const reset = () => { for (const k of Object.keys(calls)) calls[k].length = 0; execFails = false; };
 
 test('the notification names the reason and offers Why, Send anyway and Copy prompt', async () => {

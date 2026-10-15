@@ -176,7 +176,7 @@ async function enableTracking() {
     `• ${home(p.runtime)}: the scripts the hook runs`,
     '',
     'Nothing is sent anywhere. Copilot CLI loads extensions only in experimental mode: run /experimental on once.',
-    ...(st.plugin ? ['', 'The old ai-cost-drilldown Copilot CLI plugin is installed. It can be removed now: this extension replaces it.'] : []),
+    ...(st.plugin ? ['', 'The old ai-cost-coach Copilot CLI plugin is installed. It can be removed now: this extension replaces it.'] : []),
   ].join('\n');
   const buttons = st.plugin ? ['Set up and remove the old plugin', 'Set up'] : ['Set up'];
   const pick = await vscode.window.showInformationMessage('Set up Copilot cost tracking?', { modal: true, detail }, ...buttons);
@@ -185,7 +185,7 @@ async function enableTracking() {
   let extra = '';
   if (pick.startsWith('Set up and remove')) {
     const r = Setup.removePlugin();
-    extra = r.ok ? ' The old plugin was removed.' : ` The old plugin could not be removed (${r.output || 'copilot not found'}); run "copilot plugin uninstall ai-cost-drilldown".`;
+    extra = r.ok ? ' The old plugin was removed.' : ` The old plugin could not be removed (${r.output || 'copilot not found'}); run "copilot plugin uninstall ai-cost-coach".`;
   }
   coachChanged.fire();
   const health = Setup.check();

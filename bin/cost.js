@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 'use strict';
-// ai-cost-drilldown entry point.
+// ai-cost-coach entry point.
 //
 //   node bin/cost.js hook          userPromptSubmitted hook: answers /cost with no model call; for any other
 //                                  prompt, at most a one-line cost tip (lib/coach.js; `/cost coach off`)
@@ -170,10 +170,10 @@ function usage(msg) {
 
 // Copilot hands a skill invocation to the hook already expanded: this line first, then
 // the skill's text, with whatever followed the command on an "ARGUMENTS:" line. A plugin's
-// skill is namespaced by the plugin: typed and named "/ai-cost-drilldown:cost".
-const INVOKED = /^The user explicitly invoked the "\/(?:ai-cost-drilldown:)?cost" skill\./;
+// skill is namespaced by the plugin: typed and named "/ai-cost-coach:cost".
+const INVOKED = /^The user explicitly invoked the "\/(?:ai-cost-(?:coach|drilldown):)?cost" skill\./;
 // Prompt mode (copilot -p) passes the text as typed, before any skill expansion.
-const RAW = /^\s*\/(?:ai-cost-drilldown:)?cost(\s+|$)/;
+const RAW = /^\s*\/(?:ai-cost-(?:coach|drilldown):)?cost(\s+|$)/;
 
 /** True when the old Copilot CLI plugin of this tool is installed (its own hook is then in charge). */
 function pluginInstalled(env = process.env) {
@@ -183,7 +183,7 @@ function pluginInstalled(env = process.env) {
   try {
     const root = path.join(home, 'installed-plugins');
     return fs.readdirSync(root).some((marketplace) => {
-      try { return fs.existsSync(path.join(root, marketplace, 'ai-cost-drilldown')); } catch { return false; }
+      try { return ['ai-cost-drilldown', 'ai-cost-coach'].some((n) => fs.existsSync(path.join(root, marketplace, n))); } catch { return false; }
     });
   } catch { return false; }
 }
@@ -195,7 +195,7 @@ async function hook() {
   try { input = JSON.parse(raw); } catch { return; }
   const prompt = String(input?.prompt ?? '');
   if (!input.sessionId && input.session_id) input.sessionId = input.session_id; // hook files in VS Code's format send snake_case
-  // `hook --vscode` is what ~/.copilot/hooks/ai-cost-drilldown.json runs (set up by the VS Code extension). Copilot CLI
+  // `hook --vscode` is what ~/.copilot/hooks/ai-cost-coach.json runs (set up by the VS Code extension). Copilot CLI
   // reads that folder too and answers like a plugin hook. An old plugin install has its own hook that answers, so
   // then this one stays out of the way and a prompt is never handled twice.
   const inCli = Boolean(process.env.COPILOT_CLI_BINARY_VERSION);
@@ -230,7 +230,7 @@ async function hook() {
       process.stdout.write(JSON.stringify({ decision: 'block', reason: `Cost report opened in an editor tab: ${file}` }));
       return;
     }
-    const line = `Saved the cost report: ${file} (ai-cost-drilldown: it could not be opened in a tab; the report was built locally and only this line used the model).`;
+    const line = `Saved the cost report: ${file} (ai-cost-coach: it could not be opened in a tab; the report was built locally and only this line used the model).`;
     process.stdout.write(JSON.stringify({ modifiedPrompt: `Reply with exactly this one line and nothing else, using no tools:\n\n${line}` }));
     return;
   }
@@ -242,7 +242,7 @@ async function hook() {
     reason = `/cost: ${err.usage || err.constructor?.name === 'UsageError' ? err.message : err.stack}\n\n${HELP}`;
   }
   // Copilot shows its usual "Working" spinner while a hook runs, so say plainly that no model was involved.
-  process.stdout.write(JSON.stringify({ decision: 'block', reason: `${String(reason)}\n\n_Answered locally by ai-cost-drilldown: no model call, no AI credits._` }));
+  process.stdout.write(JSON.stringify({ decision: 'block', reason: `${String(reason)}\n\n_Answered locally by ai-cost-coach: no model call, no AI credits._` }));
 }
 
 /** Writes a report as fixed-width text (box tables) for an editor tab; yesterday's reports are cleared. */
@@ -332,7 +332,7 @@ if (require.main === module) {
   const main = argv[0] === 'hook' ? hook() : cli(argv);
   main.catch((err) => {
     if (argv[0] === 'hook') { try { require('../lib/coach').logError(err); } catch { /* not even that */ } }
-    console.error(`ai-cost-drilldown: ${err.usage || err.constructor?.name === 'UsageError' ? err.message : err.stack}`);
+    console.error(`ai-cost-coach: ${err.usage || err.constructor?.name === 'UsageError' ? err.message : err.stack}`);
     process.exit(argv[0] === 'hook' ? 0 : 1); // a hook must never fail the prompt
   });
 }

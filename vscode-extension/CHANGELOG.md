@@ -13,6 +13,16 @@ All notable changes to the AI Cost Coach extension (called AI Cost Drilldown up 
   figure carries a `~`: use them to compare prompts and models, not to report a footprint. The factors and their
   sources are in `lib/emissions-factors.json`; replace that file to use your own.
 
+### Changed
+
+- **ai-cost-drilldown is now ai-cost-coach everywhere:** the Copilot CLI plugin (so the skill is `/ai-cost-coach:cost`),
+  the package, the hook file (`~/.copilot/hooks/ai-cost-coach.json`), the data folder (`~/.ai-cost-coach/`), the labels
+  the coach puts on its notices, the docs and the repository links (now `techsalvator/ai-coach`). Nothing is lost on
+  upgrade: an existing `~/.ai-cost-drilldown/` folder keeps being used, the earlier-named hook file is moved to the new
+  name (never left beside it, which would answer every prompt twice), `/ai-cost-drilldown:cost` is still understood, and
+  an old plugin installed under either name is still found and can be removed. This list's earlier entries keep the old
+  names, as they were then.
+
 ## 0.2.4 (2026-10-14)
 
 ### Changed

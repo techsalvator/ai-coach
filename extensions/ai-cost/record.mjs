@@ -4,11 +4,18 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+/** ~/.ai-cost-coach, except that an existing ~/.ai-cost-drilldown (the folder's earlier name) keeps being used. */
+function defaultHome(home) {
+    const current = path.join(home, ".ai-cost-coach");
+    const earlier = path.join(home, ".ai-cost-drilldown");
+    return !fs.existsSync(current) && fs.existsSync(earlier) ? earlier : current;
+}
+
 /** The log file. Same rules as lib/paths.js in the repo: an explicit file wins, else the data dir. */
 export function logPath(env = process.env, home = os.homedir()) {
     const explicit = env.AI_COST_TOKEN_LOG || env.COPILOT_COST_TOKEN_LOG;
     if (explicit) return explicit;
-    const base = env.AI_COST_HOME || env.COPILOT_COST_HOME || path.join(home, ".ai-cost-drilldown");
+    const base = env.AI_COST_HOME || env.COPILOT_COST_HOME || defaultHome(home);
     return path.join(base, "copilot-tokens.jsonl");
 }
 
@@ -40,7 +47,7 @@ export function toRecord(ev, sessionId, now = () => new Date().toISOString()) {
 
 /** Where a session's last main-agent call is kept: one small file per session, beside the log's data dir. */
 export function lastCallPath(sessionId, env = process.env, home = os.homedir()) {
-    const base = env.AI_COST_HOME || env.COPILOT_COST_HOME || path.join(home, ".ai-cost-drilldown");
+    const base = env.AI_COST_HOME || env.COPILOT_COST_HOME || defaultHome(home);
     return path.join(base, "last-call", `${String(sessionId).replace(/[^\w.-]/g, "_")}.json`);
 }
 

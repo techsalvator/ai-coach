@@ -19,18 +19,18 @@ async function go(argv, { responses = [], tty = true, confirm = true, preinstall
 }
 
 test('the default source is this repository on GitHub', () => {
-  assert.strictEqual(DEFAULT_SOURCE, 'flexera/ai-cost-drilldown');
-  assert.strictEqual(parse([]).source, 'flexera/ai-cost-drilldown');
+  assert.strictEqual(DEFAULT_SOURCE, 'techsalvator/ai-coach');
+  assert.strictEqual(parse([]).source, 'techsalvator/ai-coach');
 });
 
 test('--yes installs the plugin only (it carries the token logger) and says what to do next', async () => {
   const r = await go(['--yes']);
   assert.strictEqual(r.code, 0);
-  assert.deepStrictEqual(r.calls, ['copilot plugin install flexera/ai-cost-drilldown']);
+  assert.deepStrictEqual(r.calls, ['copilot plugin install techsalvator/ai-coach']);
   assert.ok(!r.hasCopy(), 'no second copy of the logger');
   assert.match(r.out, /Plugin: installed/);
   assert.match(r.out, /\/experimental on/);
-  assert.match(r.out, /\/ai-cost-drilldown:cost help.*\/tokenlog/);
+  assert.match(r.out, /\/ai-cost-coach:cost help.*\/tokenlog/);
 });
 
 test('it asks first; declining changes nothing', async () => {
@@ -51,7 +51,7 @@ test('--dry-run shows the plan and runs nothing', async () => {
   const r = await go(['--dry-run']);
   assert.strictEqual(r.code, 0);
   assert.deepStrictEqual(r.calls, []);
-  assert.match(r.out, /copilot plugin install flexera\/ai-cost-drilldown/);
+  assert.match(r.out, /copilot plugin install techsalvator\/ai-coach/);
   assert.match(r.out, /Dry run/);
 });
 
@@ -87,7 +87,7 @@ test('an old-named separate copy (ai-cost-token-logger) is also flagged and remo
 test('installing again over an existing plugin just succeeds; a deprecation warning is noted', async () => {
   const r = await go(['--yes'], { responses: [{ status: 0, stdout: 'Warning: Direct plugin installs (repos, URLs, local paths) are deprecated.', stderr: '' }] });
   assert.strictEqual(r.code, 0);
-  assert.deepStrictEqual(r.calls, ['copilot plugin install flexera/ai-cost-drilldown']);
+  assert.deepStrictEqual(r.calls, ['copilot plugin install techsalvator/ai-coach']);
   assert.match(r.out, /deprecated in favour of marketplaces/);
 });
 
@@ -110,7 +110,7 @@ test('copilot not on PATH: prints the manual command', async () => {
   const r = await go(['--yes'], { responses: [{ status: null, stdout: '', stderr: '', missing: true }] });
   assert.strictEqual(r.code, 1, 'nothing could be installed: no Copilot CLI and no VS Code');
   assert.match(r.out, /`copilot` command was not found/);
-  assert.match(r.out, /copilot plugin install flexera\/ai-cost-drilldown/);
+  assert.match(r.out, /copilot plugin install techsalvator\/ai-coach/);
 });
 
 test('no Copilot CLI but VS Code: the plugin is skipped, the chat hook and tasks are still set up (from npx: via a kept copy)', async () => {
@@ -136,14 +136,14 @@ test('no Copilot CLI but VS Code: the plugin is skipped, the chat hook and tasks
   assert.match(text, /From a terminal the same reports are: node ".*bin.cost\.js" help/);
   // from npx: the scripts are copied somewhere that stays, and removed again on --uninstall
   const b = make();
-  const cache = path.join(b.dir, '_npx', 'abc123', 'node_modules', 'ai-cost-drilldown');
+  const cache = path.join(b.dir, '_npx', 'abc123', 'node_modules', 'ai-cost-coach');
   for (const d of ['bin', 'lib']) fs.cpSync(path.join(here, d), path.join(cache, d), { recursive: true });
   fs.copyFileSync(path.join(here, 'package.json'), path.join(cache, 'package.json'));
   assert.strictEqual(await run(['--yes', '--dir', b.dir], { ...b.deps, here: cache }), 0, b.out.join('\n'));
-  const app = path.join(b.dir, '.ai-cost-drilldown', 'app');
+  const app = path.join(b.dir, '.ai-cost-coach', 'app');
   assert.ok(fs.existsSync(path.join(app, 'lib', 'coach.js')) && fs.existsSync(path.join(app, 'bin', 'cost.js')));
   assert.ok(b.command().includes(`${app.replace(/\\/g, '/')}/bin/cost.js`), b.command());
-  assert.ok(fs.readFileSync(b.tasks(), 'utf8').includes('.ai-cost-drilldown/app'));
+  assert.ok(fs.readFileSync(b.tasks(), 'utf8').includes('.ai-cost-coach/app'));
   assert.strictEqual(await run(['--yes', '--uninstall', '--dir', b.dir], { ...b.deps, here: cache }), 0, b.out.join('\n'));
   assert.ok(!fs.existsSync(app) && !fs.existsSync(vh.hookFile(b.dir)));
 });
@@ -162,7 +162,7 @@ test('--from-here installs the plugin from the checkout the installer is in (to 
 test('--uninstall removes the plugin and a separate logger copy, keeping the log', async () => {
   const r = await go(['--yes', '--uninstall'], { preinstalled: true });
   assert.strictEqual(r.code, 0);
-  assert.deepStrictEqual(r.calls, ['copilot plugin uninstall ai-cost-drilldown']);
+  assert.deepStrictEqual(r.calls, ['copilot plugin uninstall ai-cost-coach']);
   assert.ok(!r.hasCopy());
   assert.match(r.out, /token log is kept/);
   const plain = await go(['--yes', '--uninstall']);
@@ -172,7 +172,7 @@ test('--uninstall removes the plugin and a separate logger copy, keeping the log
 test('--vscode-hook writes the chat hook file, pointing at the installed plugin when there is one; --uninstall removes it', async () => {
   const vh = require('../bin/vscode-hook');
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'install-hook-'));
-  const plugin = path.join(dir, 'installed-plugins', '_direct', 'ai-cost-drilldown');
+  const plugin = path.join(dir, 'installed-plugins', '_direct', 'ai-cost-coach');
   fs.mkdirSync(path.join(plugin, 'bin'), { recursive: true });
   fs.writeFileSync(path.join(plugin, 'bin', 'cost.js'), '');
   const out = [];
@@ -193,7 +193,7 @@ test('with VS Code present the tasks and the chat hook are added by default; --n
   const vh = require('../bin/vscode-hook');
   const make = (withCode) => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'install-default-'));
-    const plugin = path.join(dir, 'installed-plugins', '_direct', 'ai-cost-drilldown');
+    const plugin = path.join(dir, 'installed-plugins', '_direct', 'ai-cost-coach');
     fs.mkdirSync(path.join(plugin, 'bin'), { recursive: true });
     for (const f of ['cost.js', 'claude-cost.js']) fs.writeFileSync(path.join(plugin, 'bin', f), '');
     const users = [['Library', 'Application Support'], ['AppData', 'Roaming'], ['.config']].map((p) => path.join(dir, ...p, 'Code', 'User'));

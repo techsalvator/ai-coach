@@ -1,4 +1,4 @@
-// ai-cost — the Copilot CLI token logger of the ai-cost-drilldown VS Code extension.
+// ai-cost — the Copilot CLI token logger of the ai-cost-coach VS Code extension.
 //
 //   /tokenlog      where the per-call token log is, and how many calls this session has recorded
 //   /cost ...      the cost reports, when the report code sits next to this file (not in the copy the VS Code extension
@@ -6,7 +6,7 @@
 //
 // It also records the tokens of every model call. Copilot's session log has credits per prompt but no tokens;
 // the live `assistant.usage` event has them for every model call (main agent and subagents), so this appends one
-// JSON line per call to ~/.ai-cost-drilldown/copilot-tokens.jsonl (AI_COST_TOKEN_LOG / AI_COST_HOME change that).
+// JSON line per call to ~/.ai-cost-coach/copilot-tokens.jsonl (AI_COST_TOKEN_LOG / AI_COST_HOME change that).
 // The reports read it for the token split, `prompt N calls`, `call K` and the token-level advice; without it
 // they show ~estimates.
 //

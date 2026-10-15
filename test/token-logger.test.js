@@ -30,7 +30,7 @@ test('toRecord: a main-agent call, missing fields default, and non-model events 
 
 test('logPath follows the same rules as lib/paths.js', async () => {
   const { logPath } = await load();
-  assert.strictEqual(logPath({}, '/home/u'), path.join('/home/u', '.ai-cost-drilldown', 'copilot-tokens.jsonl'));
+  assert.strictEqual(logPath({}, '/home/u'), path.join('/home/u', '.ai-cost-coach', 'copilot-tokens.jsonl'));
   assert.strictEqual(logPath({ AI_COST_HOME: '/data' }, '/home/u'), path.join('/data', 'copilot-tokens.jsonl'));
   assert.strictEqual(logPath({ AI_COST_TOKEN_LOG: '/x/log.jsonl', AI_COST_HOME: '/data' }, '/home/u'), '/x/log.jsonl');
   assert.strictEqual(logPath({ COPILOT_COST_HOME: '/old' }, '/home/u'), path.join('/old', 'copilot-tokens.jsonl'));

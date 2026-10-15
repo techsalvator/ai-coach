@@ -8,7 +8,7 @@ const path = require('path');
 
 // In the repository the report code is the parent folder's lib/ (always current); the packaged .vsix carries its own copy in runtime/.
 const libDir = [path.join(__dirname, '..', 'lib'), path.join(__dirname, 'runtime', 'lib')].find((d) => fs.existsSync(path.join(d, 'claude-cost.js')));
-if (!libDir) throw new Error('ai-cost-drilldown lib not found: run `npm run bundle-runtime`');
+if (!libDir) throw new Error('ai-cost-coach lib not found: run `npm run bundle-runtime`');
 const cc = require(path.join(libDir, 'claude-cost.js'));
 const em = require(path.join(libDir, 'emissions.js'));
 

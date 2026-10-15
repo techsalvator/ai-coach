@@ -1,5 +1,5 @@
 'use strict';
-// The coach switches, stored where the hooks read them (~/.ai-cost-drilldown/config.json), through lib/coach.js,
+// The coach switches, stored where the hooks read them (~/.ai-cost-coach/config.json), through lib/coach.js,
 // so the checkboxes and `/cost coach …` always agree. No VS Code dependency.
 const path = require('path');
 const { libDir } = require('./model');

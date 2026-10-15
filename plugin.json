@@ -1,5 +1,5 @@
 {
-  "name": "ai-cost-drilldown",
+  "name": "ai-cost-coach",
   "description": "Where AI spend goes, per prompt, session, Jira epic and model call. /cost for GitHub Copilot CLI (credits, dollars, tokens, advice), answered by a hook with no AI credits; plus a Claude Code cost report.",
   "version": "0.1.0",
   "keywords": ["cost", "credits", "tokens", "usage", "billing"],
