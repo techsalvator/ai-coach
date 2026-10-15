@@ -10,6 +10,7 @@ const path = require('path');
 const libDir = [path.join(__dirname, '..', 'lib'), path.join(__dirname, 'runtime', 'lib')].find((d) => fs.existsSync(path.join(d, 'claude-cost.js')));
 if (!libDir) throw new Error('ai-cost-drilldown lib not found: run `npm run bundle-runtime`');
 const cc = require(path.join(libDir, 'claude-cost.js'));
+const em = require(path.join(libDir, 'emissions.js'));
 
 const sizeOf = (u) => (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0);
 
@@ -168,7 +169,7 @@ async function toolContent(file, id) {
   return null;
 }
 
-module.exports = { clip, toolContent, split, mergeSplit, modelsOf, subset, libDir, callDetail, load, dayTotal, money, tokens };
+module.exports = { em, clip, toolContent, split, mergeSplit, modelsOf, subset, libDir, callDetail, load, dayTotal, money, tokens };
 
 if (require.main === module) {
   load({ maxSessions: Number(process.argv[2]) || 5 }).then((ss) => {

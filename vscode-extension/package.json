@@ -2,7 +2,7 @@
   "name": "ai-cost-coach",
   "displayName": "AI Cost Coach",
   "description": "See where your AI spend goes, from a month down to a single tool call, for Claude Code, GitHub Copilot CLI and VS Code Copilot Chat.",
-  "version": "0.2.4",
+  "version": "0.3.0",
   "publisher": "techselva",
   "license": "MIT",
   "private": true,

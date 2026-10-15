@@ -1,0 +1,8 @@
+# What stays out of the .vsix. runtime/ (made by `npm run bundle-runtime`) and media/ must ship, and so must the
+# walkthrough screenshots: the tour reads them from the package, so they must not be listed here.
+test/**
+scripts/**
+.vscode/**
+.gitignore
+**/*.map
+**/*.test.js

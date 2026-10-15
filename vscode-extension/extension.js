@@ -10,7 +10,9 @@ const Setup = require('./copilotsetup');
 const SORT = require('./sort');
 const Held = require('./heldprompts');
 const CH = require('./charts');
-const { dayTotal, money, tokens } = require('./model');
+const { dayTotal, money, tokens, em } = require('./model');
+// Public-estimate figures, so always shown with the ~
+const sustain = (i) => `<h3>Sustainability</h3>${tiles([['CO₂e (est.)', i ? `~${em.format(i.g)}` : '—'], ['Electricity (est.)', i ? `~${em.formatWh(i.wh)}` : '—'], ['Water (est.)', i ? `~${em.formatMl(i.ml)}` : '—']])}`;
 const { loadAll, callContent, promptTools, toolContent, SOURCE_LABEL } = require('./sources');
 const Quota = require('./quota');
 const Guard = require('./modelguard');
@@ -361,8 +363,9 @@ function overviewHtml(compact = false) {
   const syncBtn = `<button class="link" data-drill='{"kind":"sync"}' title="Read the session logs again">↻ Sync sessions</button>`;
   const body = (compact ? '' : `<h2>AI cost overview</h2>`) + crumb
     + `<p class="note sync">${syncBtn} <span>${stamp}</span>${rangeButtons()}</p>`
-    + `<p class="note">${all.length} sessions, ${prompts.length} prompts${F.isActive(filter) ? ` · filtered: ${esc(F.describe(filter))} <button class="link" data-drill='{"kind":"clear"}'>Clear</button>` : ''}.${compact ? '' : ' Costs are list-price estimates: Claude Code per token, Copilot in AI credits at $0.01.'}</p>`
+    + `<p class="note">${all.length} sessions, ${prompts.length} prompts${F.isActive(filter) ? ` · filtered: ${esc(F.describe(filter))} <button class="link" data-drill='{"kind":"clear"}'>Clear</button>` : ''}.${compact ? '' : ' Costs are list-price estimates: Claude Code per token, Copilot in AI credits at $0.01. CO₂e, electricity and water are rough public-estimate figures from token counts (not GreenPixie or measured data), good for comparing, not reporting.'}</p>`
     + tiles([['Total cost', money(usd)], overviewMonth ? ['Prompts', prompts.length] : ['Today', money(dayTotal(all))], ['Sessions', all.length], ['Cache hit', sp && sp.cacheHit != null ? `${Math.round(sp.cacheHit * 100)}%` : '—']])
+    + sustain(em.totalImpact(all))
     + quotaHtml(Quota.read())
     + `<h3>${chartTitle} <span class="note">· ${overviewMonth || overviewDays === 0 ? 'click a bar to open' : 'click a bar to filter'}</span></h3>${CH.dailyCost(all, SOURCE_LABEL, { days: overviewDays, month: overviewMonth, chart, chips: harnessChoice() })}${overviewMonth ? '' : coverageNote(loaded)}`
     + (!overviewMonth && overviewDays === 0 ? `<h3>Cost by month</h3>${monthTable(CH.monthTotals(all), compact)}` : '')
@@ -488,7 +491,7 @@ function detailHtml(n, content, ctx) {
     rows = [['Session', n.id], ['Source', SOURCE_LABEL[n.source]], ['Folder', n.cwd || ''], ['Branch', n.branch || '']];
     const max = Math.max(...n.prompts.map((p) => p.usd || 0), 0.0001);
     const chrono = [...n.prompts].sort((x, y) => (x.ts < y.ts ? -1 : 1));
-    extra = `${tiles([['Cost', money(n.usd)], ['Prompts', n.prompts.length], ['Model calls', n.split.calls], ['Cache hit', n.split.cacheHit == null ? '—' : `${Math.round(n.split.cacheHit * 100)}%`]])}`
+    extra = `${tiles([['Cost', money(n.usd)], ['Prompts', n.prompts.length], ['Model calls', n.split.calls], ['Cache hit', n.split.cacheHit == null ? '—' : `${Math.round(n.split.cacheHit * 100)}%`]])}${sustain(em.sessionImpact(n))}`
       + `<h3>Cost per prompt</h3>${CH.columns(chrono.map((p) => ({ label: String(p.n), tip: `${p.n}. ${clip(p.text, 60)}\n${money(p.usd)} · ${tk(p.split)}\nClick to open`, drill: { kind: 'prompt', sid: n.id, n: p.n }, parts: [{ value: p.usd || 0, slot: 1 }] })))}`
       + (n.split.known ? `<h3>Where the tokens went</h3>${CH.composition(CH.tokenSegments(n.split))}` : '')
       + `<h3>Models</h3>${modelTable(n.models)}<h3>Prompts</h3>${usageTable(n.prompts.map((p) => ({ label: `${p.n}. ${clip(p.text, 70)}`, usd: p.usd, sp: p.split, drill: { kind: 'prompt', sid: n.id, n: p.n } })), max)}`;
@@ -497,6 +500,7 @@ function detailHtml(n, content, ctx) {
     rows = [['Models', n.models.join(', ')], ['Took', `${n.seconds}s`]];
     const ptools = (content && content.tools) || n.toolCalls;
     extra += tiles([['Cost', (n.usdEstimated ? '~' : '') + money(n.usd)], ['Model calls', n.calls.length || n.split.calls || '—'], ['Cache hit', n.split.cacheHit == null ? '—' : `${Math.round(n.split.cacheHit * 100)}%`], ['Tool calls', ptools.length || n.toolCount || '—']]);
+    extra += sustain(em.promptImpact(n));
     if (n.split.known) extra += `<h3>Where the tokens went</h3>${CH.composition(CH.tokenSegments(n.split))}`;
     if (n.calls.length > 1) extra += `<h3>Cost per model call</h3>${CH.columns(n.calls.map((c) => ({ label: String(c.n), tip: `${c.n}. ${c.model}${c.who === 'main' ? '' : ` (${c.who})`}\n${money(c.usd)} · ${tokens(c.tokensIn)} in / ${tokens(c.tokensOut)} out\nClick to open`, drill: { kind: 'call', sid: n.sid, pn: n.n, cn: c.n }, parts: [{ value: c.usd || 0, slot: 1 }] })))}`;
     if (n.note) extra += `<p class="tip">${esc(n.note)}</p>`;
@@ -520,6 +524,7 @@ function detailHtml(n, content, ctx) {
     const tools = (content && content.tools && content.tools.length ? content.tools : n.toolCalls) || [];
     const sp = { in: n.tokensIn, fresh: n.fresh, cacheRead: n.cacheRead, cacheWrite: n.cacheWrite, out: n.tokensOut, known: true };
     extra = tiles([['Cost', money(n.usd)], ['Tokens in', tokens(n.tokensIn)], ['Tokens out', tokens(n.tokensOut)], ['Cache hit', n.tokensIn ? `${Math.round((n.cacheRead / n.tokensIn) * 100)}%` : '—']])
+      + sustain(em.callImpact(n))
       + `<h3>Where the tokens went</h3>${CH.composition(CH.tokenSegments(sp))}`
       + (tools.length ? `<h3>Tool calls (${tools.length})</h3>${toolTable(tools, ctx && ctx.p ? { sid: ctx.s.id, pn: ctx.p.n, cn: n.n } : null)}` : n.tools ? `<p class="note">${n.tools} tool call${n.tools > 1 ? 's' : ''}: no detail recorded.</p>` : '<h3>Tool calls</h3><p class="note">This call made no tool calls.</p>') + extra;
   }
