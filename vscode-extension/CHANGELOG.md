@@ -2,6 +2,17 @@
 
 All notable changes to the AI Cost Coach extension (called AI Cost Drilldown up to 0.2.2). Versions follow semver.
 
+## 0.3.0 (2026-10-15)
+
+### Added
+
+- **A Sustainability section with estimated CO₂e, electricity and water.** It shows under the main tiles on the overview,
+  session, prompt and model-call screens. The figures come from token counts (output tokens weigh most, cache reads
+  least), a per-model-size energy factor, a data-centre overhead (PUE 1.2), a global grid average (445 g CO₂/kWh) and a
+  water factor (1.8 L/kWh). They are public-estimate assumptions, not measured data and not GreenPixie data, so every
+  figure carries a `~`: use them to compare prompts and models, not to report a footprint. The factors and their
+  sources are in `lib/emissions-factors.json`; replace that file to use your own.
+
 ## 0.2.4 (2026-10-14)
 
 ### Changed
