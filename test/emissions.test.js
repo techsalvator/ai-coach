@@ -37,3 +37,27 @@ test('unknown models are medium and flagged as a guess; format picks a readable 
 test('the factors file says it is not GreenPixie data', () => {
   assert.match(em.FACTORS.label, /NOT GreenPixie/);
 });
+
+test('electricity, CO2e and water move together and follow the factors', () => {
+  const f = em.FACTORS;
+  const i = em.callImpact({ tokensIn: 0, tokensOut: 1000 }, 'claude-sonnet-5-5');
+  assert.ok(Math.abs(i.wh - 1000 * f.classes.medium.whPerOutputToken * f.pue) < 1e-9);
+  assert.ok(Math.abs(i.g - i.wh * f.gridGramsPerKWh / 1000) < 1e-9);
+  assert.ok(Math.abs(i.ml - i.wh * f.waterLitresPerKWh) < 1e-9);
+});
+
+test('session and total impact sum prompts; no data gives null', () => {
+  const p = { calls: [{ model: 'claude-sonnet-5-5', fresh: 100, cacheRead: 0, cacheWrite: 0, tokensOut: 100 }] };
+  const one = em.promptImpact(p);
+  const t = em.totalImpact([{ prompts: [p, p] }, { prompts: [p] }]);
+  assert.ok(Math.abs(t.wh - 3 * one.wh) < 1e-9 && Math.abs(t.ml - 3 * one.ml) < 1e-9);
+  assert.strictEqual(em.promptImpact({ calls: [] }), null);
+});
+
+test('units scale readably', () => {
+  assert.strictEqual(em.formatWh(0.456), '0.46 Wh');
+  assert.strictEqual(em.formatWh(2500), '2.50 kWh');
+  assert.strictEqual(em.formatMl(35.2), '35.2 mL');
+  assert.strictEqual(em.formatMl(1500), '1.50 L');
+  assert.strictEqual(em.formatMl(null), '—');
+});

@@ -116,6 +116,10 @@ test('the overview shows an estimated CO2e tile, labelled as an estimate', () =>
   ext.load(sessions, { days: 0 });
   const html = page();
   assert.match(html, /CO₂e \(est\.\)/);
-  assert.match(html, /~[\d.]+ (g|kg) CO₂e/);
+  assert.match(html, /Electricity \(est\.\)/);
+  assert.match(html, /Water \(est\.\)/);
+  assert.match(html, /~[\d.]+ (Wh|kWh)/);
+  assert.match(html, /~[\d.]+ (mL|L)/);
+  assert.match(html, /~[\d.]+ (g|kg)</);
   assert.match(html, /not GreenPixie/);
 });
