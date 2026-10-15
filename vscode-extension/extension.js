@@ -324,7 +324,7 @@ function toggleCoach(key, on) {
   coachChanged.fire();
 }
 
-const RANGES = [[0, 'By month'], [-1, 'By day'], [7, '7d'], [30, '30d'], [90, '90d']];
+const RANGES = [[0, 'Month'], [-1, 'Day'], [30, '30d']];
 const rangeButtons = () => `<span class="range">${RANGES.map(([d, l]) => `<button class="${d === overviewDays && !overviewMonth ? 'on' : ''}" data-drill='${JSON.stringify({ kind: 'range', value: d })}' title="${d > 0 ? `Last ${d} days` : d < 0 ? 'Every day that is loaded' : 'Every month that is loaded'}">${l}</button>`).join('')}</span>`;
 function monthTable(months, compact) {
   const present = Object.keys(CH.SOURCE_SLOT).filter((k) => months.some((m) => m.bySource[k]));
@@ -364,13 +364,13 @@ function overviewHtml(compact = false) {
   const stamp = syncing ? 'Syncing…' : lastSynced ? `Synced ${lastSynced.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : 'Not synced yet';
   const syncBtn = `<button class="link" data-drill='{"kind":"sync"}' title="Read the session logs again">↻ Sync sessions</button>`;
   const body = (compact ? '' : `<h2>AI cost overview</h2>`) + crumb
-    + `<p class="note sync">${syncBtn} <span>${stamp}</span>${rangeButtons()}</p>`
+    + `<p class="note sync">${syncBtn} <span>${stamp}</span></p>`
     + `<p class="note">${all.length} sessions, ${prompts.length} prompts${F.isActive(filter) ? ` · filtered: ${esc(F.describe(filter))} <button class="link" data-drill='{"kind":"clear"}'>Clear</button>` : ''}.${compact ? '' : ' Costs are list-price estimates: Claude Code per token, Copilot in AI credits at $0.01. CO₂e, electricity and water are rough public-estimate figures from token counts (not GreenPixie or measured data), good for comparing, not reporting.'}</p>`
     + tiles([['Total cost', money(usd)], ...(overviewMonth ? [['Prompts', prompts.length]] : [['Today', money(dayTotal(all))], ['This month', money(thisMonth ? thisMonth.total : 0)]]), ['Sessions', all.length], ['Cache hit', sp && sp.cacheHit != null ? `${Math.round(sp.cacheHit * 100)}%` : '—']])
     + (!overviewMonth && bySource.length > 1 ? `<h3>This month by harness</h3>${tiles(bySource.map((x) => [SOURCE_LABEL[x.k], money(thisMonth && thisMonth.bySource[x.k] || 0)]))}` : '')
     + sustain(em.totalImpact(all))
     + quotaHtml(Quota.read())
-    + `<h3>${chartTitle} <span class="note">· ${overviewMonth || overviewDays === 0 ? 'click a bar to open' : 'click a bar to filter'}</span></h3>${CH.dailyCost(all, SOURCE_LABEL, { days: overviewDays, month: overviewMonth, chart, chips: harnessChoice() })}${overviewMonth ? '' : coverageNote(loaded)}`
+    + `<div class="charthead"><h3>${chartTitle} <span class="note">· ${overviewMonth || overviewDays === 0 ? 'click a bar to open' : 'click a bar to filter'}</span></h3>${rangeButtons()}</div>${CH.dailyCost(all, SOURCE_LABEL, { days: overviewDays, month: overviewMonth, chart, chips: harnessChoice() })}${overviewMonth ? '' : coverageNote(loaded)}`
     + (!overviewMonth && overviewDays === 0 ? `<h3>Cost by month</h3>${monthTable(CH.monthTotals(all), compact)}` : '')
     + (sp && sp.known ? `<h3>Where the tokens went</h3>${CH.composition(CH.tokenSegments(sp))}` : '')
     + (bySource.length > 1 ? `<h3>By source</h3>${CH.hbars(bySource.map((x) => ({ label: SOURCE_LABEL[x.k], value: x.usd, text: `${money(x.usd)} · ${x.n} sessions`, drill: { kind: 'source', value: x.k } })))}` : '')

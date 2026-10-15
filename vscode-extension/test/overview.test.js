@@ -31,7 +31,7 @@ test('By day draws one bar group per day of the loaded history, and the others k
   assert.strictEqual(ext.days, -1);
   const html = page();
   assert.match(html, /Cost per day, all loaded history/);
-  assert.match(html, /class="on"[^>]*>By day</);
+  assert.match(html, /class="on"[^>]*>Day</);
   assert.ok(barDays(html) > 60, `every day, not weeks (${barDays(html)} days)`);
   assert.ok(!/Cost by month<\/h3>\s*<table/.test(html), 'no month table here');
   drill({ kind: 'range', value: 30 });
@@ -163,4 +163,14 @@ test('the overview tiles include this month, with this month\'s cost for each ha
   drill({ kind: 'month', value: '2026-09' });
   assert.ok(!page().includes('This month by harness'), 'not inside a single month');
   drill({ kind: 'month', value: '' });
+});
+
+test('the range buttons sit in the chart heading, and offer Month, Day and 30d', () => {
+  ext.load(sessions, { days: 0 });
+  const html = page();
+  const head = /<div class="charthead">(.*?)<\/div>/s.exec(html);
+  assert.ok(head, 'a chart heading row');
+  assert.deepStrictEqual([...head[1].matchAll(/<button[^>]*>([^<]*)<\/button>/g)].map((m) => m[1]), ['Month', 'Day', '30d']);
+  assert.match(head[1], /Cost by month/);
+  assert.ok(!/class="note sync"[^>]*>.*class="range"/s.test(html.split('</p>')[0]), 'not in the top line');
 });

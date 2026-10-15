@@ -30,7 +30,7 @@ Run **AI Cost: Show Tour** (or Help → Get Started → AI Cost Coach) for a wal
 Extensions view shows this text without the images, because VS Code only loads images there from public `https` addresses.
 
 - **Overview.** Opens in an editor tab: tiles, **cost by month** stacked by tool, tokens, and cost by source, model and
-  prompt. **By month · By day · 7d · 30d · 90d** changes the range. **The legend is the tool selector:** click a tool to
+  prompt. **Month · Day · 30d**, beside the chart heading, changes the range. **The legend is the tool selector:** click a tool to
   leave it out (the same filter as **Filter → Source**, so the tree, Advice and status bar follow). Almost everything is
   clickable: a bar filters or opens that month, day, model or prompt.
 

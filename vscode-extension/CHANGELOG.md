@@ -6,6 +6,9 @@ All notable changes to the AI Cost Coach extension (called AI Cost Drilldown up 
 
 ### Added
 
+- **The range buttons moved next to the chart they change.** They sat in the top line beside "Sync sessions" but only
+  changed the cost chart, so they now sit on the right of the chart's heading, as **Month · Day · 30d** (7d and 90d are
+  gone: Day already reaches any day).
 - **A "This month" tile on the overview, and this month's cost for each harness.** The tiles are now Total cost, Today,
   This month, Sessions and Cache hit; under them, "This month by harness" gives Claude Code, Copilot CLI and VS Code
   chat a tile each (they add up to This month). Both follow the harness chips, and neither shows inside a single month.
