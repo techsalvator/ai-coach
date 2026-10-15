@@ -30,10 +30,16 @@ const G = require('../modelguard');
 
 const DAY = 86400000;
 const NOW = Date.now();
+let writes = 0;
 const snapshot = (used, resets) => {
   const dir = path.join(process.env.COPILOT_HOME, 'session-state', 's1');
   fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, 'events.jsonl'), `{"quotaSnapshots":{"premium_interactions":${JSON.stringify({ isUnlimitedEntitlement: false, entitlementRequests: 300, usedRequests: used, overage: 0, remainingPercentage: 100 - used / 3, resetDate: new Date(resets).toISOString() })}}}\n`);
+  const file = path.join(dir, 'events.jsonl');
+  fs.writeFileSync(file, `{"quotaSnapshots":{"premium_interactions":${JSON.stringify({ isUnlimitedEntitlement: false, entitlementRequests: 300, usedRequests: used, overage: 0, remainingPercentage: 100 - used / 3, resetDate: new Date(resets).toISOString() })}}}\n`);
+  // The quota reader caches by size and mtime. Two snapshots of the same size written within one clock tick (Windows'
+  // coarse mtime) would look unchanged, so every write gets its own mtime.
+  const t = new Date(Date.now() + ++writes * 2000);
+  fs.utimesSync(file, t, t);
 };
 /** Sessions whose last 7 days used `week` premium requests, spread over two prompts. */
 const sessions = (week) => [{ id: 's1', source: 'copilot', title: 't', ts: new Date(NOW - DAY).toISOString(), usd: 1, split: { known: false }, models: [], tokensIn: 0, tokensOut: 0,
