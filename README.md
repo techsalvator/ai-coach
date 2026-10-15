@@ -29,7 +29,8 @@ remove it; the `/cost` command inside Copilot is gone, the reports are in VS Cod
 Run **AI Cost: Show Tour** (or Help → Get Started → AI Cost Coach) for a walkthrough. The extension's page in the
 Extensions view shows this text without the images, because VS Code only loads images there from public `https` addresses.
 
-- **Overview.** Opens in an editor tab: tiles, **cost by month** stacked by tool, tokens, and cost by source, model and
+- **Overview.** Opens in an editor tab: tiles (total, today, this month, sessions, cache hit), this month's cost for each
+  tool, **Sustainability** tiles (below), **cost by month** stacked by tool, tokens, and cost by source, model and
   prompt. **Month · Day · 30d**, beside the chart heading, changes the range. **The legend is the tool selector:** click a tool to
   leave it out (the same filter as **Filter → Source**, so the tree, Advice and status bar follow). Almost everything is
   clickable: a bar filters or opens that month, day, model or prompt.
@@ -146,6 +147,18 @@ the AI credits it recorded, at **$0.01 per credit**, with each call priced at Gi
 usage is not billed per token: these are list-price figures for comparing where usage went. **Cache:** every call re-sends
 the whole conversation, normally from a cheap cache; a prompt that starts with a miss pays full price for all of it.
 **Sources:** `~/.claude/projects/`, `~/.copilot/session-state/` and VS Code's chat storage.
+
+**Sustainability is a rough estimate, not a measurement.** The **Sustainability** tiles (overview, session, prompt and
+model call) show estimated **CO₂e**, **electricity** and **water** for the tokens in your logs; every figure carries a
+`~`, and **hovering a tile shows the sum with your actual numbers**. Electricity comes first: output tokens, plus fresh
+input at 0.1, cache writes at 0.1 and cache reads at 0.01 of an output token, times an energy figure for the model's size
+(0.0003 Wh per output token for small models such as Haiku, 0.0007 for medium such as Sonnet and GPT, 0.0015 for large such
+as Opus; models it does not recognise count as medium), times a data-centre overhead (PUE) of 1.2. **CO₂e** is that
+electricity at 445 g per kWh, the global average grid. **Water** is that electricity at 1.8 L per kWh of cooling. These are
+public-estimate assumptions (Mistral's lifecycle assessment, Google and OpenAI's per-prompt disclosures, Ember/IEA grid
+data, a Berkeley Lab data-centre report), good to an order of magnitude at best, and they are **not GreenPixie data and
+not vendor-measured**: use them to compare prompts and models, not to report a footprint. The factors and their sources
+are in `lib/emissions-factors.json`; replace that file to use your own.
 
 ## Settings and commands
 
